@@ -1,113 +1,297 @@
 import 'package:flutter/material.dart';
 
+import 'list_view.dart';
+import 'repository.dart';
+import 'todo.dart';
+import 'accounts.dart';
+import 'login.dart';
+
 void main() {
-  runApp(MyApp());
+  runApp(App());
 }
 
-class MyApp extends StatelessWidget {
+class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Kolab Do',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      initialRoute: "/",
+      routes: {
+        '/': (context) => KolabDo(title: 'Kolab Do'),
+        '/todo': (context) => TodoView(),
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+class KolabDo extends StatefulWidget {
+  KolabDo({Key key, this.title}) : super(key: key);
 
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _App createState() => _App();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _App extends State<KolabDo> {
+  Calendar _currentCalendar = null;
+  Repository _repository = null;
+  TextEditingController _textInputController = TextEditingController();
+  bool _initializing = true;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  @override
+  void initState() {
+    super.initState();
+
+    Account.loadCurrent().then((Account account) async {
+      Repository repository = Repository(account);
+      await repository.ready;
+      setState(() {
+        _repository = repository;
+        _currentCalendar = _repository.currentCalendar;
+        _initializing = false;
+      });
     });
   }
 
   @override
+  void dispose() {
+    _textInputController.dispose();
+    super.dispose();
+  }
+
+  Future<void> onActionSelected(String value) async {
+    switch (value) {
+      case 'clear-completed':
+        {
+          await _repository.removeCompleted();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> showLoginDialog(
+      BuildContext context, replace, Account acc) async {
+    Account account;
+    if (replace) {
+      account = await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute<Account>(
+          builder: (BuildContext context) => LoginDialog(account: acc),
+          fullscreenDialog: true,
+        ),
+      );
+    } else {
+      account = await Navigator.push(
+        context,
+        MaterialPageRoute<Account>(
+          builder: (BuildContext context) => LoginDialog(account: acc),
+          fullscreenDialog: true,
+        ),
+      );
+    }
+
+    if (account != null) {
+      print("Setting the repository");
+      Account.store(account);
+      Account.setCurrent(account);
+
+      setState(() {
+        _repository = Repository(account);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    if (_initializing) {
+      return Center(
+          child: CircularProgressIndicator()
+      );
+    }
+
+    if (_repository == null) {
+      return Center(
+          child: TextButton(
+        child: Text("Login"),
+        onPressed: () => showLoginDialog(context, false, Account.create()),
+      ));
+    }
+
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text(_currentCalendar?.name ?? widget.title),
+        actions: <Widget>[
+          PopupMenuButton(
+            onSelected: onActionSelected,
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem(
+                  value: 'clear-completed',
+                  child: Text('Clear completed'),
+                ),
+              ];
+            },
+          ),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet<void>(
+            context: context,
+            builder: (BuildContext context) {
+              return Container(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Row(
+                      children: [
+                        Flexible(
+                            child: TextField(
+                                controller: _textInputController,
+                                autofocus: true,
+                                decoration: InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    hintText: 'Add a todo'),
+                                onSubmitted: (text) {
+                                  _repository.createTodo(Todo.newTodo(
+                                      text, _currentCalendar.path));
+                                  _textInputController.clear();
+                                  //TODO refocus the edit instead of pop
+                                  Navigator.pop(context);
+                                })),
+                        ElevatedButton(
+                          child: Icon(Icons.add),
+                          onPressed: () {
+                            _repository.createTodo(Todo.newTodo(
+                                _textInputController.text,
+                                _currentCalendar.path));
+                            _textInputController.clear();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: CircleBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Align(
+                    //     alignment: Alignment.centerRight,
+                    //     child: OutlinedButton(
+                    //         child: const Text('Done'),
+                    //         onPressed: () => Navigator.pop(context),
+                    //     )
+                    // )
+                  ],
+                ),
+              );
+            },
+          ).then((result) => _textInputController.clear());
+        },
+        tooltip: 'Add Todo',
+        child: Icon(Icons.add),
+      ),
+      drawer: Drawer(
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+            UserAccountsDrawerHeader(
+                accountEmail:
+                    Text(_repository.account.username ?? "No account?"),
+                onDetailsPressed: () async {
+                  List<Account> accounts = await Account.listAccounts();
+                  await showDialog<void>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return SimpleDialog(
+                          title: const Text('Select account'),
+                          children: <Widget>[
+                            for (Account account in accounts)
+                              SimpleDialogOption(
+                                onPressed: () {
+                                  Account.setCurrent(account);
+                                  setState(() {
+                                    _repository = Repository(account);
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child: Text(account.username),
+                              ),
+                            SimpleDialogOption(
+                              onPressed: () => showLoginDialog(
+                                  context, true, Account.create()),
+                              child: const Text('Add Account'),
+                            ),
+                          ],
+                        );
+                      });
+
+                }
+                ),
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text('Edit'),
+              onTap: () => showLoginDialog(context, false, _repository.account),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+            const Divider(
+              height: 10,
+              thickness: 2,
+              indent: 20,
+              endIndent: 20,
+            ),
+            Flexible(
+              child: RefreshIndicator(
+                child: StreamBuilder<List<Calendar>>(
+                    stream: _repository.calendars(),
+                    builder: (BuildContext context,
+                        AsyncSnapshot<List<Calendar>> snapshot) {
+                      if (snapshot.hasError) {
+                        return const Text("Error!");
+                      } else if (snapshot.data == null) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+
+                      return ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: snapshot.data.length,
+                        itemBuilder: (context, index) {
+                          Calendar calendar = snapshot.data[index];
+
+                          return ListTile(
+                            leading: Icon(Icons.format_list_bulleted_rounded),
+                            title: Text(calendar.name),
+                            tileColor: (calendar.path == _currentCalendar?.path)
+                                ? Colors.blue
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                _currentCalendar = calendar;
+                                _repository.setCalendar(calendar);
+                                Navigator.pop(context);
+                              });
+                            },
+                          );
+                        },
+                      );
+                    }),
+                onRefresh: () => _repository.refreshCalendars(),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: TodoList(calendar: _currentCalendar, repository: _repository),
+      ),
     );
   }
 }
