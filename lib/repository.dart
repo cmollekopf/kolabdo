@@ -38,6 +38,7 @@ class Todo {
     this.id = Uuid().v4();
     this.dateTime = DateTime.now().toUtc();
     this.done = false;
+    this.doing = false;
     this.path = path + this.id + ".ics";
     this.json = {
       'VTODO': [
@@ -49,6 +50,7 @@ class Todo {
       ],
     };
   }
+
   Todo.empty() {}
 
   Todo.fromJson(json, href) {
@@ -59,6 +61,7 @@ class Todo {
       this.summary = t['SUMMARY'];
       this.dateTime = DateTime.parse(t['DTSTAMP']);
       this.done = t['STATUS'] == 'COMPLETED';
+      this.doing = t['STATUS'] == 'IN-PROCESS';
       this.json = json;
     }
   }
@@ -115,6 +118,7 @@ class Todo {
   String summary = "";
   DateTime dateTime = DateTime.now();
   bool done = false;
+  bool doing = false;
 
   Map<String, dynamic> json;
   String path;
@@ -129,6 +133,7 @@ class ReplayOperation {
 }
 
 class Repository {
+  bool _showDoing = false;
 
   Future<void> ready;
 
@@ -282,6 +287,14 @@ class Repository {
     _streamController.add(await remote);
   }
 
+  set showDoing(show) {
+    _showDoing = show;
+    //Reload todos (we're just filtering locally)
+    _streamController.add(_todos);
+  }
+
+  get showDoing => _showDoing;
+
   Future<void> refreshAll() async {
     _streamController.add(await fetchTodos(currentCalendar));
   }
@@ -347,7 +360,7 @@ class Repository {
         if (!a.done && b.done) return 1;
         return a.dateTime.compareTo(b.dateTime);
       });
-      return list;
+      return list.where((a) => !showDoing || a.doing).toList();
     });
   }
 

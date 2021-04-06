@@ -71,6 +71,13 @@ class _App extends State<KolabDo> {
           await _repository.removeCompleted();
         }
         break;
+      case 'doing':
+        {
+          setState(() {
+            _repository.showDoing = !_repository.showDoing;
+          });
+        }
+        break;
       default:
         break;
     }
@@ -111,9 +118,7 @@ class _App extends State<KolabDo> {
   @override
   Widget build(BuildContext context) {
     if (_initializing) {
-      return Center(
-          child: CircularProgressIndicator()
-      );
+      return Center(child: CircularProgressIndicator());
     }
 
     if (_repository == null) {
@@ -128,16 +133,20 @@ class _App extends State<KolabDo> {
       appBar: AppBar(
         title: Text(_currentCalendar?.name ?? widget.title),
         actions: <Widget>[
-          PopupMenuButton(
+          PopupMenuButton<String>(
             onSelected: onActionSelected,
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'clear-completed',
-                  child: Text('Clear completed'),
-                ),
-              ];
-            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              CheckedPopupMenuItem<String>(
+                checked: _repository.showDoing,
+                value: 'doing',
+                child: const Text('Doing'),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'clear-completed',
+                child: Text('Clear completed'),
+              ),
+            ],
           ),
         ],
       ),
@@ -233,9 +242,7 @@ class _App extends State<KolabDo> {
                           ],
                         );
                       });
-
-                }
-                ),
+                }),
             ListTile(
               leading: Icon(Icons.person),
               title: Text('Edit'),
