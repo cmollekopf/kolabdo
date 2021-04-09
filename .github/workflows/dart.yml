@@ -22,7 +22,11 @@ jobs:
           java-version: '12.x'
       - uses: subosito/flutter-action@v1
         with:
-          flutter-version: '1.22.4'
+          channel: 'beta'
       - run: flutter pub get
       - run: flutter test
       - run: flutter build apk
+      - uses: actions/upload-artifact@v2
+        with:
+          name: kolabdo.apk
+          path: build/app/outputs/apk/release/app-release.apk
