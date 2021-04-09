@@ -1,16 +1,14 @@
 # kolabdo
 
-A new Flutter project.
+![Alt text](/screenshots/shoppinglist.png?raw=true "My shopping list")
 
-## Getting Started
+A simple mobile todo list app on top of caldav, written in flutter.
 
-This project is a starting point for a Flutter application.
+While I use it with Kolab (kolab.org), it *should* in principle work with any caldav server.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Initial focus and features:
+* Android app (I don't have an ios device)
+* Shopping list (I use a shared todolist as shopping list, and that's where the tile layout works best I suppose)
+* View/Complete/Add todos on the go with ease
+* View tasks that are currently in "doing" (maps to IN-PROCESS ical property)
+* Multi-account support
