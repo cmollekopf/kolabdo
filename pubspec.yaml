@@ -31,8 +31,8 @@ dependencies:
 
   caldav:
     git: https://github.com/cmollekopf/caldav.git
-
-  ical_parser: ^1.0.0
+  ical_parser:
+    git: https://github.com/cmollekopf/ical-parser.git
   localstorage: ^4.0.0+1
   uuid: ^2.0.0
   intl: ^0.17.0

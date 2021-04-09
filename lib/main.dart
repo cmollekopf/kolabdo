@@ -133,6 +133,17 @@ class _App extends State<KolabDo> {
       appBar: AppBar(
         title: Text(_currentCalendar?.name ?? widget.title),
         actions: <Widget>[
+          Row(children: [
+            Text("Doing"),
+            Switch(
+              value: _repository.showDoing,
+              onChanged: (state) {
+                setState(() {
+                  _repository.showDoing = state;
+                });
+              },
+            ),
+          ]),
           PopupMenuButton<String>(
             onSelected: onActionSelected,
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -172,7 +183,8 @@ class _App extends State<KolabDo> {
                                     hintText: 'Add a todo'),
                                 onSubmitted: (text) {
                                   _repository.createTodo(Todo.newTodo(
-                                      text, _currentCalendar.path));
+                                      text, _currentCalendar.path,
+                                      isDoing: _repository.showDoing));
                                   _textInputController.clear();
                                   //TODO refocus the edit instead of pop
                                   Navigator.pop(context);
@@ -182,7 +194,8 @@ class _App extends State<KolabDo> {
                           onPressed: () {
                             _repository.createTodo(Todo.newTodo(
                                 _textInputController.text,
-                                _currentCalendar.path));
+                                _currentCalendar.path,
+                                isDoing: _repository.showDoing));
                             _textInputController.clear();
                           },
                           style: ElevatedButton.styleFrom(

@@ -86,6 +86,8 @@ class _TodoList extends State<TodoList> {
                           todo.setDone(!todo.done);
                           _repository.updateTodo(todo);
                         },
+                        onLongPress: () => Navigator.pushNamed(context, '/todo',
+                            arguments: TodoArguments(todo, _repository)),
                       ),
                     );
                   });

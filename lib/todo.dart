@@ -6,138 +6,68 @@ import 'package:ical_parser/ical_parser.dart';
 
 import 'repository.dart';
 
-/// Todo route arguments.
 class TodoArguments {
   final Todo todo;
-  // ignore: public_member_api_docs
-  TodoArguments(this.todo) : assert(todo != null);
+  final Repository repository;
+  TodoArguments(this.todo, this.repository) : assert(todo != null);
 }
 
-class TodoView extends StatelessWidget {
-  /// A single data row.
-  Widget row(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, right: 8, top: 8),
-      child: Row(children: [
-        Text('$title: '),
-        Text(value ?? 'N/A'),
-      ]),
-    );
+class TodoView extends StatefulWidget {
+  TodoView({Key key}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _TodoView();
+}
+
+class _TodoView extends State<TodoView> {
+  Todo todo;
+  Repository _repository;
+
+  String unescape(String s) {
+    return s.replaceAll("\\n", "\n");
   }
 
   @override
   Widget build(BuildContext context) {
     final TodoArguments args = ModalRoute.of(context).settings.arguments;
-    Todo todo = args.todo;
+
+    todo = args.todo;
+    _repository = args.repository;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(todo.id),
+        title: Text(todo.summary, maxLines: 2),
       ),
       body: SingleChildScrollView(
           child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(children: [
-          // row('Triggered application open', args.openedApplication.toString()),
-
-          row('Todo ID', todo.id),
-          /* row('Sender ID', todo.senderId), */
-          /* row('Category', todo.category), */
-          /* row('Collapse Key', todo.collapseKey), */
-          /* row('Content Available', todo.contentAvailable.toString()), */
-          /* row('Data', todo.data.toString()), */
-          /* row('From', todo.from), */
-          /* row('Todo ID', todo.todoId), */
-          /* row('Sent Time', todo.sentTime?.toString()), */
-          /* row('Thread ID', todo.threadId), */
-          /* row('Time to Live (TTL)', todo.ttl?.toString()), */
-          /* if (notification != null) ...[ */
-          /*   Padding( */
-          /*     padding: const EdgeInsets.only(top: 16), */
-          /*     child: Column(children: [ */
-          /*       const Text( */
-          /*         'Remote Notification', */
-          /*         style: TextStyle(fontSize: 18), */
-          /*       ), */
-          /*       row( */
-          /*         'Title', */
-          /*         notification.title, */
-          /*       ), */
-          /*       row( */
-          /*         'Body', */
-          /*         notification.body, */
-          /*       ), */
-          /*       if (notification.android != null) ...[ */
-          /*         const Text( */
-          /*           'Android Properties', */
-          /*           style: TextStyle(fontSize: 18), */
-          /*         ), */
-          /*         row( */
-          /*           'Channel ID', */
-          /*           notification.android.channelId, */
-          /*         ), */
-          /*         row( */
-          /*           'Click Action', */
-          /*           notification.android.clickAction, */
-          /*         ), */
-          /*         row( */
-          /*           'Color', */
-          /*           notification.android.color, */
-          /*         ), */
-          /*         row( */
-          /*           'Count', */
-          /*           notification.android.count?.toString(), */
-          /*         ), */
-          /*         row( */
-          /*           'Image URL', */
-          /*           notification.android.imageUrl, */
-          /*         ), */
-          /*         row( */
-          /*           'Link', */
-          /*           notification.android.link, */
-          /*         ), */
-          /*         row( */
-          /*           'Priority', */
-          /*           notification.android.priority?.toString(), */
-          /*         ), */
-          /*         row( */
-          /*           'Small Icon', */
-          /*           notification.android.smallIcon, */
-          /*         ), */
-          /*         row( */
-          /*           'Sound', */
-          /*           notification.android.sound, */
-          /*         ), */
-          /*         row( */
-          /*           'Ticker', */
-          /*           notification.android.ticker, */
-          /*         ), */
-          /*         row( */
-          /*           'Visibility', */
-          /*           notification.android.visibility?.toString(), */
-          /*         ), */
-          /*       ], */
-          /*       if (notification.apple != null) ...[ */
-          /*         const Text( */
-          /*           'Apple Properties', */
-          /*           style: TextStyle(fontSize: 18), */
-          /*         ), */
-          /*         row( */
-          /*           'Subtitle', */
-          /*           notification.apple.subtitle, */
-          /*         ), */
-          /*         row( */
-          /*           'Badge', */
-          /*           notification.apple.badge, */
-          /*         ), */
-          /*         row( */
-          /*           'Sound', */
-          /*           notification.apple.sound?.name, */
-          /*         ), */
-          /*       ] */
-          /*     ]), */
-          /*   ) */
-          /* ] */
+          CheckboxListTile(
+              value: todo.doing,
+              onChanged: (state) {
+                var modified = todo;
+                modified.setDoing(state);
+                _repository.updateTodo(modified);
+                setState(() {
+                  todo = modified;
+                });
+              },
+              title: const Text("Doing"),
+              controlAffinity: ListTileControlAffinity.leading),
+          CheckboxListTile(
+              value: todo.done,
+              onChanged: (state) {},
+              title: const Text("Done"),
+              controlAffinity: ListTileControlAffinity.leading),
+          SizedBox(height: 10),
+          Text(unescape(todo.description ?? "")),
+          ElevatedButton(
+            child: Text("Delete"),
+            onPressed: () {
+              _repository.removeTodo(todo);
+              Navigator.pop(context);
+            },
+          ),
         ]),
       )),
     );

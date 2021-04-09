@@ -33,12 +33,11 @@ String formatDateTime(DateTime dt) {
 class Todo {
   Todo(this.path, this.id, this.summary, this.dateTime, this.done, this.json);
 
-  Todo.newTodo(summary, String path) {
+  Todo.newTodo(String summary, String path, {bool isDoing = false}) {
     this.summary = summary;
     this.id = Uuid().v4();
     this.dateTime = DateTime.now().toUtc();
     this.done = false;
-    this.doing = false;
     this.path = path + this.id + ".ics";
     this.json = {
       'VTODO': [
@@ -46,9 +45,11 @@ class Todo {
           'UID': this.id,
           'SUMMARY': this.summary,
           'DTSTAMP': formatDateTime(this.dateTime),
+          'STATUS': 'NEEDS-ACTION',
         },
       ],
     };
+    setDoing(isDoing);
   }
 
   Todo.empty() {}
@@ -59,6 +60,7 @@ class Todo {
       this.path = href;
       this.id = t['UID'];
       this.summary = t['SUMMARY'];
+      this.description = t['DESCRIPTION'];
       this.dateTime = DateTime.parse(t['DTSTAMP']);
       this.done = t['STATUS'] == 'COMPLETED';
       this.doing = t['STATUS'] == 'IN-PROCESS';
@@ -103,6 +105,13 @@ class Todo {
     return this;
   }
 
+  Todo setDoing(bool isDoing) {
+    doing = isDoing;
+    json['VTODO'][0]['STATUS'] =
+        doing ? 'IN-PROCESS' : (done ? 'COMPLETED' : 'NEEDS-ACTION');
+    return this;
+  }
+
   factory Todo.fromJSONEncodable(map) {
     return Todo.fromJson(map['json'], map['path']);
   }
@@ -116,6 +125,7 @@ class Todo {
 
   String id;
   String summary = "";
+  String description = "";
   DateTime dateTime = DateTime.now();
   bool done = false;
   bool doing = false;
@@ -167,12 +177,15 @@ class Repository {
       //TODO await result and verify it succeeded
       switch (operation.type) {
         case ReplayType.create:
+          print("Create ${operation.todo.path} ${operation.todo.toICal()}");
           _client.addEntry(operation.todo.path, operation.todo.toICal());
           break;
         case ReplayType.modify:
+          print("Modify ${operation.todo.path} ${operation.todo.toICal()}");
           _client.updateEntry(operation.todo.path, operation.todo.toICal());
           break;
         case ReplayType.delete:
+          print("Delete ${operation.todo.path}");
           _client.removeEntry(operation.todo.path);
           break;
       }
@@ -346,7 +359,7 @@ class Repository {
         .map<Calendar>((m) {
           return Calendar.fromJSONEncodable(m);
         })
-        .where((t) => t.id != null)
+        .where((t) => t.path != null)
         .toList();
     _calendars = calendars;
     return calendars;
@@ -360,7 +373,7 @@ class Repository {
         if (!a.done && b.done) return 1;
         return a.dateTime.compareTo(b.dateTime);
       });
-      return list.where((a) => !showDoing || a.doing).toList();
+      return list.where((a) => !_showDoing || a.doing).toList();
     });
   }
 
