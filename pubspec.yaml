@@ -30,9 +30,13 @@ dependencies:
   cupertino_icons: ^1.0.2
 
   caldav:
-    git: https://github.com/cmollekopf/caldav.git
+    git:
+      url: https://github.com/cmollekopf/caldav.git
+      ref: master
   ical_parser:
-    git: https://github.com/cmollekopf/ical-parser.git
+    git:
+      url: https://github.com/cmollekopf/ical-parser.git
+      ref: master
   localstorage: ^4.0.0+1
   uuid: ^2.0.0
   intl: ^0.17.0
