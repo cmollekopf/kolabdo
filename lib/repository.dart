@@ -166,6 +166,8 @@ class Repository {
   StreamController<List<Todo>> _streamController;
   StreamController<List<Calendar>> _calendarStreamController;
 
+  get rawTodos => _todos;
+
   Future<void> processQueue() {
     if (_client == null) {
       return null;

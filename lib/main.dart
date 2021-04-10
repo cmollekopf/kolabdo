@@ -5,6 +5,7 @@ import 'repository.dart';
 import 'todo.dart';
 import 'accounts.dart';
 import 'login.dart';
+import 'input.dart';
 
 void main() {
   runApp(App());
@@ -40,7 +41,6 @@ class KolabDo extends StatefulWidget {
 class _App extends State<KolabDo> {
   Calendar _currentCalendar = null;
   Repository _repository = null;
-  TextEditingController _textInputController = TextEditingController();
   bool _initializing = true;
 
   @override
@@ -60,7 +60,6 @@ class _App extends State<KolabDo> {
 
   @override
   void dispose() {
-    _textInputController.dispose();
     super.dispose();
   }
 
@@ -166,56 +165,10 @@ class _App extends State<KolabDo> {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return Container(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Row(
-                      children: [
-                        Flexible(
-                            child: TextField(
-                                controller: _textInputController,
-                                autofocus: true,
-                                decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Add a todo'),
-                                onSubmitted: (text) {
-                                  _repository.createTodo(Todo.newTodo(
-                                      text, _currentCalendar.path,
-                                      isDoing: _repository.showDoing));
-                                  _textInputController.clear();
-                                  //TODO refocus the edit instead of pop
-                                  Navigator.pop(context);
-                                })),
-                        ElevatedButton(
-                          child: Icon(Icons.add),
-                          onPressed: () {
-                            _repository.createTodo(Todo.newTodo(
-                                _textInputController.text,
-                                _currentCalendar.path,
-                                isDoing: _repository.showDoing));
-                            _textInputController.clear();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: CircleBorder(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Align(
-                    //     alignment: Alignment.centerRight,
-                    //     child: OutlinedButton(
-                    //         child: const Text('Done'),
-                    //         onPressed: () => Navigator.pop(context),
-                    //     )
-                    // )
-                  ],
-                ),
-              );
+              return TodoInput(
+                  calendar: _currentCalendar, repository: _repository);
             },
-          ).then((result) => _textInputController.clear());
+          );
         },
         tooltip: 'Add Todo',
         child: Icon(Icons.add),
