@@ -17,6 +17,7 @@ class TodoList extends StatefulWidget {
 
 class _TodoList extends State<TodoList> {
   List<Color> _randomColors;
+  List<int> _removalInProgress = [];
 
   List<Color> initializeColors() {
     //Fixed a seed that seems to result in decent colors
@@ -59,35 +60,51 @@ class _TodoList extends State<TodoList> {
                   itemCount: snapshot.data.length,
                   itemBuilder: (BuildContext ctx, index) {
                     Todo todo = snapshot.data[index];
-
-                    return Card(
-                      color: getColor(context, todo),
-                      child: InkWell(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          alignment: Alignment.topLeft,
-                          child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  todo.summary.toLowerCase(),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18.0,
-                                  ),
-                                  maxLines: 4,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ]),
-                        ),
-                        onTap: () async {
+                    var removing = _removalInProgress.contains(index);
+                    return AnimatedOpacity(
+                      opacity: removing ? 0.1 : 1.0,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.fastOutSlowIn,
+                      onEnd: () async {
+                        if (_removalInProgress.contains(index)) {
+                          //The modification is going to rebuild this anyways, so setState is not necessary
+                          _removalInProgress.remove(index);
                           todo.setDone(!todo.done);
                           _repository.updateTodo(todo);
-                        },
-                        onLongPress: () => Navigator.pushNamed(context, '/todo',
-                            arguments: TodoArguments(todo, _repository)),
+                        }
+                      },
+                      child: Card(
+                        color: getColor(context, todo),
+                        child: InkWell(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            alignment: Alignment.topLeft,
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    todo.summary.toLowerCase(),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18.0,
+                                    ),
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ]),
+                          ),
+                          onTap: () async {
+                            //We fade out the item, so we don't remove it immediately
+                            setState(() {
+                              _removalInProgress.add(index);
+                            });
+                          },
+                          onLongPress: () => Navigator.pushNamed(
+                              context, '/todo',
+                              arguments: TodoArguments(todo, _repository)),
+                        ),
                       ),
                     );
                   });
