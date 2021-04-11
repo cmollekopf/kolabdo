@@ -39,7 +39,6 @@ class KolabDo extends StatefulWidget {
 }
 
 class _App extends State<KolabDo> {
-  Calendar _currentCalendar = null;
   Repository _repository = null;
   bool _initializing = true;
 
@@ -52,7 +51,6 @@ class _App extends State<KolabDo> {
       await repository.ready;
       setState(() {
         _repository = repository;
-        _currentCalendar = _repository.currentCalendar;
         _initializing = false;
       });
     });
@@ -130,7 +128,7 @@ class _App extends State<KolabDo> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_currentCalendar?.name ?? widget.title),
+        title: Text(_repository.currentCalendar?.name ?? widget.title),
         actions: <Widget>[
           Row(children: [
             Text("Doing"),
@@ -166,7 +164,7 @@ class _App extends State<KolabDo> {
             context: context,
             builder: (BuildContext context) {
               return TodoInput(
-                  calendar: _currentCalendar, repository: _repository);
+                  calendar: _repository.currentCalendar, repository: _repository);
             },
           );
         },
@@ -241,12 +239,11 @@ class _App extends State<KolabDo> {
                           return ListTile(
                             leading: Icon(Icons.format_list_bulleted_rounded),
                             title: Text(calendar.name),
-                            tileColor: (calendar.path == _currentCalendar?.path)
+                            tileColor: (calendar.path == _repository.currentCalendar?.path)
                                 ? Colors.blue
                                 : null,
                             onTap: () {
                               setState(() {
-                                _currentCalendar = calendar;
                                 _repository.setCalendar(calendar);
                                 Navigator.pop(context);
                               });
@@ -263,7 +260,7 @@ class _App extends State<KolabDo> {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TodoList(calendar: _currentCalendar, repository: _repository),
+        child: TodoList(calendar: _repository.currentCalendar, repository: _repository),
       ),
     );
   }
