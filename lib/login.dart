@@ -79,6 +79,7 @@ class LoginDialogState extends State<LoginDialog> {
                       },
                       initialValue: _account.password,
                       decoration: const InputDecoration(
+                        icon: Icon(Icons.vpn_key),
                         hintText: 'Your password',
                         labelText: 'Password',
                       ),

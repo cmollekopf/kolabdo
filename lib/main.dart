@@ -39,20 +39,16 @@ class KolabDo extends StatefulWidget {
 }
 
 class _App extends State<KolabDo> {
-  Repository _repository = null;
-  bool _initializing = true;
+  Future<Repository> _repository;
 
   @override
   void initState() {
     super.initState();
 
-    Account.loadCurrent().then((Account account) async {
+    _repository = Account.loadCurrent().then((Account account) async {
       Repository repository = Repository(account);
       await repository.ready;
-      setState(() {
-        _repository = repository;
-        _initializing = false;
-      });
+      return repository;
     });
   }
 
@@ -62,16 +58,17 @@ class _App extends State<KolabDo> {
   }
 
   Future<void> onActionSelected(String value) async {
+    Repository repository = await _repository;
     switch (value) {
       case 'clear-completed':
         {
-          await _repository.removeCompleted();
+          await repository.removeCompleted();
         }
         break;
       case 'doing':
         {
           setState(() {
-            _repository.showDoing = !_repository.showDoing;
+            repository.showDoing = !repository.showDoing;
           });
         }
         break;
@@ -107,161 +104,176 @@ class _App extends State<KolabDo> {
       Account.setCurrent(account);
 
       setState(() {
-        _repository = Repository(account);
+        _repository = Future<Repository>.value(Repository(account));
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_initializing) {
-      return Center(child: CircularProgressIndicator());
-    }
+    return FutureBuilder<Repository>(
+        future: _repository,
+        builder: (BuildContext context, AsyncSnapshot<Repository> snapshot) {
+          if (!snapshot.hasData) {
+            return Center(child: CircularProgressIndicator());
+          }
 
-    if (_repository == null) {
-      return Center(
-          child: TextButton(
-        child: Text("Login"),
-        onPressed: () => showLoginDialog(context, false, Account.create()),
-      ));
-    }
+          Repository repository = snapshot.data;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_repository.currentCalendar?.name ?? widget.title),
-        actions: <Widget>[
-          Row(children: [
-            Text("Doing"),
-            Switch(
-              value: _repository.showDoing,
-              onChanged: (state) {
-                setState(() {
-                  _repository.showDoing = state;
-                });
-              },
-            ),
-          ]),
-          PopupMenuButton<String>(
-            onSelected: onActionSelected,
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              CheckedPopupMenuItem<String>(
-                checked: _repository.showDoing,
-                value: 'doing',
-                child: const Text('Doing'),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'clear-completed',
-                child: Text('Clear completed'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet<void>(
-            context: context,
-            builder: (BuildContext context) {
-              return TodoInput(
-                  calendar: _repository.currentCalendar, repository: _repository);
-            },
-          );
-        },
-        tooltip: 'Add Todo',
-        child: Icon(Icons.add),
-      ),
-      drawer: Drawer(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            UserAccountsDrawerHeader(
-                accountEmail:
-                    Text(_repository.account.username ?? "No account?"),
-                onDetailsPressed: () async {
-                  List<Account> accounts = await Account.listAccounts();
-                  await showDialog<void>(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return SimpleDialog(
-                          title: const Text('Select account'),
-                          children: <Widget>[
-                            for (Account account in accounts)
-                              SimpleDialogOption(
-                                onPressed: () {
-                                  Account.setCurrent(account);
-                                  setState(() {
-                                    _repository = Repository(account);
-                                  });
-                                  Navigator.pop(context);
-                                },
-                                child: Text(account.username),
-                              ),
-                            SimpleDialogOption(
-                              onPressed: () => showLoginDialog(
-                                  context, true, Account.create()),
-                              child: const Text('Add Account'),
-                            ),
-                          ],
-                        );
+          if (repository == null) {
+            return Center(
+                child: TextButton(
+              child: Text("Login"),
+              onPressed: () =>
+                  showLoginDialog(context, false, Account.create()),
+            ));
+          }
+
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(repository.currentCalendar?.name ?? widget.title),
+              actions: <Widget>[
+                Row(children: [
+                  Text("Doing"),
+                  Switch(
+                    value: repository.showDoing,
+                    onChanged: (state) {
+                      setState(() {
+                        repository.showDoing = state;
                       });
-                }),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Edit'),
-              onTap: () => showLoginDialog(context, false, _repository.account),
+                    },
+                  ),
+                ]),
+                PopupMenuButton<String>(
+                  onSelected: onActionSelected,
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    CheckedPopupMenuItem<String>(
+                      checked: repository.showDoing,
+                      value: 'doing',
+                      child: const Text('Doing'),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'clear-completed',
+                      child: Text('Clear completed'),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const Divider(
-              height: 10,
-              thickness: 2,
-              indent: 20,
-              endIndent: 20,
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return TodoInput(
+                        calendar: repository.currentCalendar,
+                        repository: repository);
+                  },
+                );
+              },
+              tooltip: 'Add Todo',
+              child: Icon(Icons.add),
             ),
-            Flexible(
-              child: RefreshIndicator(
-                child: StreamBuilder<List<Calendar>>(
-                    stream: _repository.calendars(),
-                    builder: (BuildContext context,
-                        AsyncSnapshot<List<Calendar>> snapshot) {
-                      if (snapshot.hasError) {
-                        return const Text("Error!");
-                      } else if (snapshot.data == null) {
-                        return Center(child: CircularProgressIndicator());
-                      }
+            drawer: Drawer(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  UserAccountsDrawerHeader(
+                      accountEmail:
+                          Text(repository.account.username ?? "No account?"),
+                      onDetailsPressed: () async {
+                        List<Account> accounts = await Account.listAccounts();
+                        await showDialog<void>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return SimpleDialog(
+                                title: const Text('Select account'),
+                                children: <Widget>[
+                                  for (Account account in accounts)
+                                    SimpleDialogOption(
+                                      onPressed: () {
+                                        Account.setCurrent(account);
+                                        setState(() {
+                                          _repository =
+                                              Future<Repository>.value(
+                                                  Repository(account));
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                                      child: Text(account.username),
+                                    ),
+                                  SimpleDialogOption(
+                                    onPressed: () => showLoginDialog(
+                                        context, true, Account.create()),
+                                    child: const Text('Add Account'),
+                                  ),
+                                ],
+                              );
+                            });
+                      }),
+                  ListTile(
+                    leading: Icon(Icons.person),
+                    title: Text('Edit'),
+                    onTap: () =>
+                        showLoginDialog(context, false, repository.account),
+                  ),
+                  const Divider(
+                    height: 10,
+                    thickness: 2,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+                  Flexible(
+                    child: RefreshIndicator(
+                      child: StreamBuilder<List<Calendar>>(
+                          stream: repository.calendars(),
+                          builder: (BuildContext context,
+                              AsyncSnapshot<List<Calendar>> snapshot) {
+                            if (snapshot.hasError) {
+                              return const Text("Error!");
+                            } else if (snapshot.data == null) {
+                              return Center(child: CircularProgressIndicator());
+                            }
 
-                      return ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: snapshot.data.length,
-                        itemBuilder: (context, index) {
-                          Calendar calendar = snapshot.data[index];
+                            return ListView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: snapshot.data.length,
+                              itemBuilder: (context, index) {
+                                Calendar calendar = snapshot.data[index];
 
-                          return ListTile(
-                            leading: Icon(Icons.format_list_bulleted_rounded),
-                            title: Text(calendar.name),
-                            tileColor: (calendar.path == _repository.currentCalendar?.path)
-                                ? Colors.blue
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                _repository.setCalendar(calendar);
-                                Navigator.pop(context);
-                              });
-                            },
-                          );
-                        },
-                      );
-                    }),
-                onRefresh: () => _repository.refreshCalendars(),
+                                return ListTile(
+                                  leading:
+                                      Icon(Icons.format_list_bulleted_rounded),
+                                  title: Text(calendar.name),
+                                  tileColor: (calendar.path ==
+                                          repository.currentCalendar?.path)
+                                      ? Colors.blue
+                                      : null,
+                                  onTap: () {
+                                    setState(() {
+                                      repository.setCalendar(calendar);
+                                      Navigator.pop(context);
+                                    });
+                                  },
+                                );
+                              },
+                            );
+                          }),
+                      onRefresh: () => repository.refreshCalendars(),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TodoList(calendar: _repository.currentCalendar, repository: _repository),
-      ),
-    );
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TodoList(
+                  calendar: repository.currentCalendar, repository: repository),
+            ),
+          );
+        });
   }
 }
