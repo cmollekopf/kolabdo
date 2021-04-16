@@ -118,13 +118,17 @@ class _TodoList extends State<TodoList> {
                 itemBuilder: (context, index) {
                   Todo todo = snapshot.data[index];
 
-                  return CheckboxListTile(
+                  return ListTile(
                     title: Text(todo.summary),
-                    value: todo.done,
-                    onChanged: (newValue) {
-                      todo.setDone(newValue);
-                      _repository.updateTodo(todo);
-                    },
+                    trailing: Checkbox(
+                      value: todo.done,
+                      onChanged: (newValue) {
+                        todo.setDone(newValue);
+                        _repository.updateTodo(todo);
+                      },
+                    ),
+                    onTap: () => Navigator.pushNamed(context, '/todo',
+                        arguments: TodoArguments(todo, _repository)),
                   );
                 });
           }),
