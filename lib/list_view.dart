@@ -119,7 +119,12 @@ class _TodoList extends State<TodoList> {
                   Todo todo = snapshot.data[index];
 
                   return ListTile(
+                    contentPadding: EdgeInsets.fromLTRB(0, 2, 2, 16),
                     title: Text(todo.summary),
+                    leading: Container(
+                      width: 4.0,
+                      decoration: BoxDecoration(color: getColor(context, todo)),
+                    ),
                     trailing: Checkbox(
                       value: todo.done,
                       onChanged: (newValue) {
