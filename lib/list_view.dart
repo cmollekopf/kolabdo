@@ -120,14 +120,11 @@ class _TodoList extends State<TodoList> {
 
                   return CheckboxListTile(
                     title: Text(todo.summary),
-                    subtitle: Text(todo.dateTime?.toString() ?? 'N/A'),
                     value: todo.done,
                     onChanged: (newValue) {
                       todo.setDone(newValue);
                       _repository.updateTodo(todo);
                     },
-                    // onTap: () => Navigator.pushNamed(context, '/todo',
-                    //     arguments: TodoArguments(todo)),
                   );
                 });
           }),
