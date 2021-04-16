@@ -6,10 +6,12 @@ import 'todo.dart';
 import 'repository.dart';
 
 class TodoList extends StatefulWidget {
-  TodoList({Key key, this.calendar, this.repository}) : super(key: key);
+  TodoList({Key key, this.calendar, this.repository, this.showGrid})
+      : super(key: key);
 
   final Calendar calendar;
   final Repository repository;
+  final bool showGrid;
 
   @override
   State<StatefulWidget> createState() => _TodoList();
@@ -52,7 +54,7 @@ class _TodoList extends State<TodoList> {
               return Center(child: CircularProgressIndicator());
             }
 
-            if (true) {
+            if (widget.showGrid) {
               return GridView.builder(
                   padding: const EdgeInsets.only(top: 16),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

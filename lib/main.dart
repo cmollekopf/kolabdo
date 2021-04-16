@@ -40,6 +40,7 @@ class KolabDo extends StatefulWidget {
 
 class _App extends State<KolabDo> {
   Future<Repository> _repository;
+  bool _showGrid = true;
 
   @override
   void initState() {
@@ -133,17 +134,26 @@ class _App extends State<KolabDo> {
             appBar: AppBar(
               title: Text(repository.currentCalendar?.name ?? widget.title),
               actions: <Widget>[
-                Row(children: [
-                  Text("Doing"),
-                  Switch(
-                    value: repository.showDoing,
-                    onChanged: (state) {
-                      setState(() {
-                        repository.showDoing = state;
-                      });
-                    },
-                  ),
-                ]),
+                IconButton(
+                  icon: Icon(_showGrid ? Icons.list : Icons.grid_view),
+                  tooltip: "Switch between grid and list view",
+                  onPressed: () {
+                    setState(() {
+                      _showGrid = !_showGrid;
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: Icon(repository.showDoing
+                      ? Icons.bookmark_border
+                      : Icons.bookmark),
+                  tooltip: "Show tasks marked as doing",
+                  onPressed: () {
+                    setState(() {
+                      repository.showDoing = !repository.showDoing;
+                    });
+                  },
+                ),
                 PopupMenuButton<String>(
                   onSelected: onActionSelected,
                   itemBuilder: (BuildContext context) =>
@@ -271,7 +281,9 @@ class _App extends State<KolabDo> {
             body: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TodoList(
-                  calendar: repository.currentCalendar, repository: repository),
+                  calendar: repository.currentCalendar,
+                  repository: repository,
+                  showGrid: _showGrid),
             ),
           );
         });
