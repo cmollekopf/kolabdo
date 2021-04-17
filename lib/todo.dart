@@ -33,41 +33,54 @@ class _TodoView extends State<TodoView> {
 
     todo = args.todo;
     _repository = args.repository;
+    String description = todo.description ?? "";
+    description =
+        description.isEmpty ? "No description." : unescape(description);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(todo.summary, maxLines: 2),
-      ),
+      appBar: AppBar(title: Text("Details", maxLines: 2), actions: <Widget>[
+        IconButton(
+          icon: Icon(todo.done ? Icons.check_box : Icons.check_box_outlined),
+          tooltip: "Done",
+          onPressed: () {
+            var modified = todo;
+            modified.setDone(!todo.done);
+            _repository.updateTodo(modified);
+            setState(() {
+              todo = modified;
+            });
+          },
+        ),
+        IconButton(
+          icon: Icon(todo.doing ? Icons.bookmark_border : Icons.bookmark),
+          tooltip: "Set task as doing",
+          onPressed: () {
+            var modified = todo;
+            modified.setDoing(!todo.doing);
+            _repository.updateTodo(modified);
+            setState(() {
+              todo = modified;
+            });
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.delete),
+          onPressed: () {
+            _repository.removeTodo(todo);
+            Navigator.pop(context);
+          },
+        ),
+      ]),
       body: SingleChildScrollView(
           child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(16),
         child: Column(children: [
-          CheckboxListTile(
-              value: todo.doing,
-              onChanged: (state) {
-                var modified = todo;
-                modified.setDoing(state);
-                _repository.updateTodo(modified);
-                setState(() {
-                  todo = modified;
-                });
-              },
-              title: const Text("Doing"),
-              controlAffinity: ListTileControlAffinity.leading),
-          CheckboxListTile(
-              value: todo.done,
-              onChanged: (state) {},
-              title: const Text("Done"),
-              controlAffinity: ListTileControlAffinity.leading),
-          SizedBox(height: 10),
-          Text(unescape(todo.description ?? "")),
-          ElevatedButton(
-            child: Text("Delete"),
-            onPressed: () {
-              _repository.removeTodo(todo);
-              Navigator.pop(context);
-            },
+          Text(
+            todo.summary,
+            style: Theme.of(context).textTheme.title,
           ),
+          SizedBox(height: 16),
+          Text(description),
         ]),
       )),
     );
