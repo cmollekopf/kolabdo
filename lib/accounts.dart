@@ -61,7 +61,7 @@ class Account {
     await storage.ready;
     var id = storage.getItem("currentAccount");
     if (id == null) {
-      return Account.create();
+      throw ("Failed to load a current account");
     }
     return await loadAccount(id);
   }

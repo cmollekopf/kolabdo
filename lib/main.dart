@@ -115,20 +115,23 @@ class _App extends State<KolabDo> {
     return FutureBuilder<Repository>(
         future: _repository,
         builder: (BuildContext context, AsyncSnapshot<Repository> snapshot) {
+          if (snapshot.hasError) {
+            return LoginDialog(
+                account: Account.create(),
+                onDone: (Account account) {
+                  Account.store(account);
+                  Account.setCurrent(account);
+
+                  setState(() {
+                    _repository = Future<Repository>.value(Repository(account));
+                  });
+                });
+          }
           if (!snapshot.hasData) {
             return Center(child: CircularProgressIndicator());
           }
 
           Repository repository = snapshot.data;
-
-          if (repository == null) {
-            return Center(
-                child: TextButton(
-              child: Text("Login"),
-              onPressed: () =>
-                  showLoginDialog(context, false, Account.create()),
-            ));
-          }
 
           return Scaffold(
             appBar: AppBar(
@@ -192,8 +195,7 @@ class _App extends State<KolabDo> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   UserAccountsDrawerHeader(
-                      accountEmail:
-                          Text(repository.account.username ?? "No account?"),
+                      accountEmail: Text(repository.account.username),
                       onDetailsPressed: () async {
                         List<Account> accounts = await Account.listAccounts();
                         await showDialog<void>(

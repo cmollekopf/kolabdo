@@ -3,7 +3,7 @@ import 'repository.dart';
 import 'accounts.dart';
 
 class LoginDialog extends StatefulWidget {
-  LoginDialog({Key key, this.account}) : super(key: key);
+  LoginDialog({Key key, this.account, this.onDone = null}) : super(key: key);
 
   @override
   LoginDialogState createState() {
@@ -11,6 +11,7 @@ class LoginDialog extends StatefulWidget {
   }
 
   final Account account;
+  final Function(Account) onDone;
 }
 
 class LoginDialogState extends State<LoginDialog> {
@@ -33,13 +34,26 @@ class LoginDialogState extends State<LoginDialog> {
         appBar: AppBar(
           title: Text('Login'),
         ),
-        body: Center(
+        body: SingleChildScrollView(
+            child: Center(
           child: Padding(
               padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 60.0),
+                      child: Center(
+                        child: Container(
+                            width: 100,
+                            height: 100,
+                            child: Image.asset('logo.png')),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 20,
+                    ),
                     TextFormField(
                       onSaved: (String value) {
                         server = value;
@@ -62,7 +76,6 @@ class LoginDialogState extends State<LoginDialog> {
                       },
                       initialValue: _account.username,
                       decoration: const InputDecoration(
-                        icon: Icon(Icons.person),
                         hintText: 'Your username',
                         labelText: 'Username',
                       ),
@@ -79,7 +92,6 @@ class LoginDialogState extends State<LoginDialog> {
                       },
                       initialValue: _account.password,
                       decoration: const InputDecoration(
-                        icon: Icon(Icons.vpn_key),
                         hintText: 'Your password',
                         labelText: 'Password',
                       ),
@@ -93,21 +105,34 @@ class LoginDialogState extends State<LoginDialog> {
                       autocorrect: false,
                       // obscureText: true,
                     ),
+                    SizedBox(
+                      height: 50,
+                    ),
                     ElevatedButton(
-                      child: Text('Submit'),
+                      style: ElevatedButton.styleFrom(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                        textStyle: TextStyle(fontSize: 20),
+                      ),
+                      child: Text('Login'),
                       onPressed: () async {
                         // Validate returns true if the form is valid, or false otherwise.
                         if (_formKey.currentState.validate()) {
                           _formKey.currentState.save();
                           if (await Repository.test(
                               server, username, password)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Success!')));
                             Account account = Account.create(
                                 server: server,
                                 username: username,
                                 password: password);
-                            Navigator.pop(context, account);
+
+                            if (widget.onDone != null) {
+                              widget.onDone(account);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Success!')));
+                              Navigator.pop(context, account);
+                            }
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                 content:
@@ -119,6 +144,6 @@ class LoginDialogState extends State<LoginDialog> {
                   ],
                 ),
               )),
-        ));
+        )));
   }
 }
