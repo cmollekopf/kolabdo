@@ -232,45 +232,14 @@ class _App extends State<KolabDo> {
                     indent: 20,
                     endIndent: 20,
                   ),
-                  Flexible(
-                    child: RefreshIndicator(
-                      child: StreamBuilder<List<Calendar>>(
-                          stream: repository.calendars(),
-                          builder: (BuildContext context,
-                              AsyncSnapshot<List<Calendar>> snapshot) {
-                            if (snapshot.hasError) {
-                              return const Text("Error!");
-                            } else if (snapshot.data == null) {
-                              return Center(child: CircularProgressIndicator());
-                            }
-
-                            return ListView.builder(
-                              padding: EdgeInsets.zero,
-                              itemCount: snapshot.data.length,
-                              itemBuilder: (context, index) {
-                                Calendar calendar = snapshot.data[index];
-
-                                return ListTile(
-                                  leading:
-                                      Icon(Icons.format_list_bulleted_rounded),
-                                  title: Text(calendar.name),
-                                  tileColor: (calendar.path ==
-                                          repository.currentCalendar?.path)
-                                      ? Colors.blue
-                                      : null,
-                                  onTap: () {
-                                    setState(() {
-                                      repository.setCalendar(calendar);
-                                      Navigator.pop(context);
-                                    });
-                                  },
-                                );
-                              },
-                            );
-                          }),
-                      onRefresh: () => repository.refreshCalendars(),
-                    ),
-                  ),
+                  CalendarList(
+                      repository: repository,
+                      onCalendarSelected: (Calendar calendar) {
+                        setState(() {
+                          repository.setCalendar(calendar);
+                          Navigator.pop(context);
+                        });
+                      })
                 ],
               ),
             ),
@@ -283,5 +252,50 @@ class _App extends State<KolabDo> {
             ),
           );
         });
+  }
+}
+
+class CalendarList extends StatelessWidget {
+  CalendarList({Key key, this.repository, this.onCalendarSelected})
+      : super(key: key);
+
+  final Repository repository;
+  final Function(Calendar) onCalendarSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      child: RefreshIndicator(
+        child: StreamBuilder<List<Calendar>>(
+            stream: repository.calendars(),
+            builder:
+                (BuildContext context, AsyncSnapshot<List<Calendar>> snapshot) {
+              if (snapshot.hasError) {
+                return const Text("Error!");
+              } else if (snapshot.data == null) {
+                return Center(child: CircularProgressIndicator());
+              }
+
+              return ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: snapshot.data.length,
+                itemBuilder: (context, index) {
+                  Calendar calendar = snapshot.data[index];
+
+                  return ListTile(
+                    leading: Icon(Icons.format_list_bulleted_rounded),
+                    title: Text(calendar.name),
+                    tileColor:
+                        (calendar.path == repository.currentCalendar?.path)
+                            ? Colors.blue
+                            : null,
+                    onTap: () => onCalendarSelected(calendar),
+                  );
+                },
+              );
+            }),
+        onRefresh: () => repository.refreshCalendars(),
+      ),
+    );
   }
 }
