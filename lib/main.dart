@@ -161,12 +161,6 @@ class _App extends State<KolabDo> {
                   onSelected: onActionSelected,
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<String>>[
-                    CheckedPopupMenuItem<String>(
-                      checked: repository.showDoing,
-                      value: 'doing',
-                      child: const Text('Doing'),
-                    ),
-                    const PopupMenuDivider(),
                     const PopupMenuItem<String>(
                       value: 'clear-completed',
                       child: Text('Clear completed'),
