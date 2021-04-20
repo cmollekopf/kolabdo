@@ -1,6 +1,6 @@
 # kolabdo
 
-![Alt text](/screenshots/shoppinglist.png?raw=true "My shopping list")
+<img src="/screenshots/shoppinglist.png" width="25%">
 
 A simple mobile todo list app on top of caldav, written in flutter.
 
