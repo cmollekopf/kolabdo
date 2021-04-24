@@ -6,19 +6,10 @@ import 'todo.dart';
 import 'accounts.dart';
 import 'login.dart';
 import 'input.dart';
+import 'calendar_selection.dart';
 
 void main() {
   runApp(App());
-}
-
-class Favorite {
-  Favorite(this._account, this._calendar);
-  Calendar _calendar;
-  Account _account;
-
-  get name => this._calendar.name;
-  get account => this._account;
-  get calendar => this._calendar;
 }
 
 class App extends StatelessWidget {
@@ -51,12 +42,10 @@ class KolabDo extends StatefulWidget {
 class _App extends State<KolabDo> {
   Future<Repository> _repository;
   bool _showGrid = true;
-  List<Favorite> _favorites = []; // = [Favorite("Favorite 1")];
 
   @override
   void initState() {
     super.initState();
-
     _repository = Account.loadCurrent().then((Account account) async {
       Repository repository = Repository(account);
       await repository.ready;
@@ -199,107 +188,27 @@ class _App extends State<KolabDo> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Container(
-                    height: 80.0,
-                    child: DrawerHeader(
-                      child: Text("Kolab Do",
-                          style: Theme.of(context).textTheme.title),
-                      decoration:
-                          BoxDecoration(color: Theme.of(context).accentColor),
-                    ),
+                  AppBar(
+                    leading: Container(),
+                    title: Text("Kolab Do"),
                   ),
+                  CalendarSelection(
+                      repository: repository,
+                      onEdit: (Account account) =>
+                          showLoginDialog(context, false, account),
+                      onSelectionChanged: (Account account, Calendar calendar) {
+                        var repo = Repository(account);
+                        if (calendar != null) {
+                          repo.setCalendar(calendar);
+                        }
 
-                  ListView.builder(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    itemCount: _favorites.length,
-                    itemBuilder: (context, index) {
-                      Favorite favorite = _favorites[index];
+                        setState(() {
+                          Account.setCurrent(account);
+                          _repository = Future<Repository>.value(repo);
+                        });
 
-                      return ListTile(
-                        leading: Icon(Icons.favorite),
-                        title: Text(favorite.name),
-                        subtitle: Text(favorite.account.username),
-                        selected: (favorite.calendar.path ==
-                            repository.currentCalendar?.path),
-                        onTap: () {
-                          Account.setCurrent(favorite.account);
-                          setState(() {
-                            var repo = Repository(favorite.account);
-                            repo.setCalendar(favorite.calendar);
-                            _repository = Future<Repository>.value(repo);
-                            Navigator.pop(context);
-                          });
-                        },
-                      );
-                    },
-                  ),
-
-                  ListTile(
-                      trailing: IconButton(
-                        icon: Icon(Icons.menu),
-                        tooltip: "Edit",
-                        onPressed: () =>
-                            showLoginDialog(context, false, repository.account),
-                      ),
-                      title: Text(repository.account.username,
-                          style: Theme.of(context).textTheme.subtitle1),
-                      onTap: () async {
-                        List<Account> accounts = await Account.listAccounts();
-                        await showDialog<void>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return SimpleDialog(
-                                title: const Text('Select account'),
-                                children: <Widget>[
-                                  for (Account account in accounts)
-                                    SimpleDialogOption(
-                                      onPressed: () {
-                                        Account.setCurrent(account);
-                                        setState(() {
-                                          _repository =
-                                              Future<Repository>.value(
-                                                  Repository(account));
-                                        });
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text(account.username),
-                                    ),
-                                  SimpleDialogOption(
-                                    onPressed: () => showLoginDialog(
-                                        context, true, Account.create()),
-                                    child: const Text('Add Account'),
-                                  ),
-                                ],
-                              );
-                            });
+                        Navigator.pop(context);
                       }),
-                  CalendarList(
-                    repository: repository,
-
-                    favorites: _favorites,
-
-                    onCalendarSelected: (Calendar calendar) {
-                      setState(() {
-                        repository.setCalendar(calendar);
-                        Navigator.pop(context);
-                      });
-                    },
-                    onFavoriteAdded: (Calendar calendar) {
-                      setState(() {
-                        _favorites.add(Favorite(repository.account, calendar));
-                      });
-                    },
-                    onFavoriteSelected: (Favorite favorite) {
-                      Account.setCurrent(favorite.account);
-                      setState(() {
-                        var repo = Repository(favorite.account);
-                        repo.setCalendar(favorite.calendar);
-                        _repository = Future<Repository>.value(repo);
-                        Navigator.pop(context);
-                      });
-                    },
-                  )
                 ],
               ),
             ),
@@ -312,111 +221,5 @@ class _App extends State<KolabDo> {
             ),
           );
         });
-  }
-}
-
-class CalendarList extends StatelessWidget {
-  CalendarList(
-      {Key key,
-      this.repository,
-      this.onCalendarSelected,
-      this.favorites,
-      this.onFavoriteAdded,
-      this.onFavoriteSelected})
-      : super(key: key);
-
-  final Repository repository;
-
-  final List<Favorite> favorites;
-  final Function(Calendar) onCalendarSelected;
-  final Function(Calendar) onFavoriteAdded;
-  final Function(Favorite) onFavoriteSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      child: RefreshIndicator(
-        onRefresh: () => repository.refreshCalendars(),
-        child: StreamBuilder<List<Calendar>>(
-            stream: repository.calendars(),
-            builder:
-                (BuildContext context, AsyncSnapshot<List<Calendar>> snapshot) {
-              if (snapshot.hasError) {
-                return const Text("Error!");
-              } else if (!snapshot.hasData) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              return CustomScrollView(slivers: <Widget>[
-                // SliverPadding(
-                //   padding: const EdgeInsets.only(),
-                //   sliver: SliverList(
-                //     delegate: SliverChildBuilderDelegate(
-                //       (BuildContext context, int index) {
-                //         Favorite favorite = favorites[index];
-
-                //         return ListTile(
-                //           leading: Icon(Icons.favorite),
-                //           title: Text(favorite.name),
-                //           onTap: () => onFavoriteSelected(favorite),
-                //           tileColor:
-                //               (favorite.calendar.path == repository.currentCalendar?.path)
-                //                   ? Colors.blue
-                //                   : null,
-                //         );
-                //       },
-                //       childCount: favorites.length,
-                //     ),
-                //   ),
-                // ),
-                SliverPadding(
-                  padding: const EdgeInsets.only(),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (BuildContext context, int index) {
-                        Calendar calendar = snapshot.data[index];
-
-                        return ListTile(
-                          leading: Icon(Icons.format_list_bulleted_rounded),
-                          trailing: IconButton(
-                            icon: Icon(Icons.favorite_border),
-                            onPressed: () => onFavoriteAdded(calendar),
-                          ),
-                          title: Text(calendar.name),
-                          selected: (calendar.path ==
-                              repository.currentCalendar?.path),
-                          // tileColor: (calendar.path ==
-                          //         repository.currentCalendar?.path)
-                          //     ? Colors.blue
-                          //     : null,
-                          onTap: () => onCalendarSelected(calendar),
-                        );
-                      },
-                      childCount: snapshot.data.length,
-                    ),
-                  ),
-                ),
-              ]);
-
-              // return ListView.builder(
-              //   padding: EdgeInsets.zero,
-              //   itemCount: snapshot.data.length,
-              //   itemBuilder: (context, index) {
-              //     Calendar calendar = snapshot.data[index];
-
-              //     return ListTile(
-              //       leading: Icon(Icons.format_list_bulleted_rounded),
-              //       title: Text(calendar.name),
-              //       tileColor:
-              //           (calendar.path == repository.currentCalendar?.path)
-              //               ? Colors.blue
-              //               : null,
-              //       onTap: () => onCalendarSelected(calendar),
-              //     );
-              //   },
-              // );
-            }),
-      ),
-    );
   }
 }
