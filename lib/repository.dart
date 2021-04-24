@@ -159,6 +159,7 @@ class Repository {
 
   List<Todo> _todos = [];
   List<Calendar> _calendars = [];
+  Set<String> _enabledCalendars = Set<String>();
   Queue<ReplayOperation> _replayQueue = Queue<ReplayOperation>();
 
   Calendar currentCalendar = null;
@@ -273,6 +274,11 @@ class Repository {
       _calendarStreamController.add(await _loadCalendarsFromStorage());
     }
 
+    var enabled = storage.getItem("enabledCalendars");
+    if (enabled != null) {
+      _enabledCalendars = Set<String>.from(enabled);
+    }
+
     print("Logging in as ${account.username}");
     _client = CalDavClient(
         account.server, account.username, account.password, '/',
@@ -379,8 +385,24 @@ class Repository {
     });
   }
 
-  Stream<List<Calendar>> calendars() {
-    return _calendarStreamController.stream;
+  bool isEnabled(Calendar calendar) {
+    return _enabledCalendars.contains(calendar.path);
+  }
+
+  void setEnabled(Calendar calendar, bool value) {
+    if (value) {
+      _enabledCalendars.add(calendar.path);
+    } else {
+      _enabledCalendars.remove(calendar.path);
+    }
+    storage.setItem("enabledCalendars", _enabledCalendars.toList());
+  }
+
+  Stream<List<Calendar>> calendars({bool showEnabled = false}) {
+    return _calendarStreamController.stream.map((list) {
+      return list.where((c) => !showEnabled || isEnabled(c)).toList();
+    });
+    ;
   }
 
   Future<List<Todo>> fetchTodos(Calendar calendar) async {
