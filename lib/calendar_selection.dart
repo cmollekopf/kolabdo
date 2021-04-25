@@ -60,11 +60,17 @@ class _CalendarSelection extends State<CalendarSelection> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.favorite),
+                        icon: Icon(_editEnabled == index
+                            ? Icons.favorite
+                            : Icons.favorite_outline),
                         tooltip: "Edit",
                         onPressed: () {
                           setState(() {
-                            _editEnabled = index;
+                            if (_editEnabled != index) {
+                              _editEnabled = index;
+                            } else {
+                              _editEnabled = -1;
+                            }
                           });
                         },
                       ),
@@ -88,6 +94,9 @@ class _CalendarSelection extends State<CalendarSelection> {
                       setState(() {
                     repository.setEnabled(calendar, enabled);
                   }),
+                  onSelectCalendars: () => setState(() {
+                    _editEnabled = index;
+                  }),
                 )
               ]);
             },
@@ -102,6 +111,7 @@ class CalendarList extends StatelessWidget {
     this.repository,
     this.onCalendarSelected,
     this.onCalendarEnabled,
+    this.onSelectCalendars,
     this.selected,
     this.editEnabled,
   }) : super(key: key);
@@ -109,6 +119,7 @@ class CalendarList extends StatelessWidget {
   final Repository repository;
   final Function(Calendar) onCalendarSelected;
   final Function(Calendar, bool) onCalendarEnabled;
+  final Function() onSelectCalendars;
   final bool selected;
   final bool editEnabled;
 
@@ -126,6 +137,14 @@ class CalendarList extends StatelessWidget {
               return Center(child: CircularProgressIndicator());
             }
             List<Calendar> calendars = snapshot.data;
+
+            if (calendars.isEmpty) {
+              return Center(
+                  child: ElevatedButton(
+                child: Text("Select Calendars"),
+                onPressed: () => this.onSelectCalendars(),
+              ));
+            }
 
             return ListView.builder(
               shrinkWrap: true,
