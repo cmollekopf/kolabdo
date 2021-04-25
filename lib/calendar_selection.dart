@@ -75,7 +75,7 @@ class _CalendarSelection extends State<CalendarSelection> {
                         },
                       ),
                       IconButton(
-                        icon: Icon(Icons.menu),
+                        icon: Icon(Icons.settings),
                         tooltip: "Edit",
                         onPressed: () => widget.onEdit(repository.account),
                       ),
@@ -162,7 +162,7 @@ class CalendarList extends StatelessWidget {
                             onCalendarEnabled(calendar, value);
                           },
                         )
-                      : Icon(Icons.format_list_bulleted_rounded)),
+                      : Icon(Icons.chevron_right)),
                   title: Text(calendar.name),
                   selected:
                       (calendar.path == repository.currentCalendar?.path) &&
