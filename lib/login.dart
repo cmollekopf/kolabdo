@@ -17,6 +17,7 @@ class LoginDialog extends StatefulWidget {
 class LoginDialogState extends State<LoginDialog> {
   final _formKey = GlobalKey<FormState>();
   Account _account;
+  bool _isObscure = true;
 
   @override
   void initState() {
@@ -91,9 +92,18 @@ class LoginDialogState extends State<LoginDialog> {
                         password = value;
                       },
                       initialValue: _account.password,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Your password',
                         labelText: 'Password',
+                        suffixIcon: IconButton(
+                            icon: Icon(_isObscure
+                                ? Icons.visibility
+                                : Icons.visibility_off),
+                            onPressed: () {
+                              setState(() {
+                                _isObscure = !_isObscure;
+                              });
+                            }),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -103,7 +113,7 @@ class LoginDialogState extends State<LoginDialog> {
                       },
                       enableSuggestions: false,
                       autocorrect: false,
-                      // obscureText: true,
+                      obscureText: _isObscure,
                     ),
                     SizedBox(
                       height: 50,
