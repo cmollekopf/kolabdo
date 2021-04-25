@@ -191,6 +191,14 @@ class _App extends State<KolabDo> {
                   AppBar(
                     leading: Container(),
                     title: Text("Kolab Do"),
+                    actions: <Widget>[
+                      IconButton(
+                        icon: Icon(Icons.add),
+                        tooltip: "Add Account",
+                        onPressed: () =>
+                            showLoginDialog(context, false, Account.create()),
+                      ),
+                    ],
                   ),
                   Expanded(
                     child: CalendarSelection(
