@@ -48,7 +48,6 @@ class _CalendarSelection extends State<CalendarSelection> {
 
           List<Account> accounts = snapshot.data;
           return ListView.builder(
-            shrinkWrap: true,
             padding: EdgeInsets.zero,
             itemCount: accounts.length,
             itemBuilder: (context, index) {
@@ -89,7 +88,7 @@ class _CalendarSelection extends State<CalendarSelection> {
                       setState(() {
                     repository.setEnabled(calendar, enabled);
                   }),
-                ),
+                )
               ]);
             },
           );
@@ -130,6 +129,7 @@ class CalendarList extends StatelessWidget {
 
             return ListView.builder(
               shrinkWrap: true,
+              physics: ClampingScrollPhysics(),
               padding: EdgeInsets.zero,
               itemCount: calendars.length,
               itemBuilder: (context, index) {

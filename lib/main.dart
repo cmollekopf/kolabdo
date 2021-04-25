@@ -192,23 +192,26 @@ class _App extends State<KolabDo> {
                     leading: Container(),
                     title: Text("Kolab Do"),
                   ),
-                  CalendarSelection(
-                      repository: repository,
-                      onEdit: (Account account) =>
-                          showLoginDialog(context, false, account),
-                      onSelectionChanged: (Account account, Calendar calendar) {
-                        var repo = Repository(account);
-                        if (calendar != null) {
-                          repo.setCalendar(calendar);
-                        }
+                  Expanded(
+                    child: CalendarSelection(
+                        repository: repository,
+                        onEdit: (Account account) =>
+                            showLoginDialog(context, false, account),
+                        onSelectionChanged:
+                            (Account account, Calendar calendar) {
+                          var repo = Repository(account);
+                          if (calendar != null) {
+                            repo.setCalendar(calendar);
+                          }
 
-                        setState(() {
-                          Account.setCurrent(account);
-                          _repository = Future<Repository>.value(repo);
-                        });
+                          setState(() {
+                            Account.setCurrent(account);
+                            _repository = Future<Repository>.value(repo);
+                          });
 
-                        Navigator.pop(context);
-                      }),
+                          Navigator.pop(context);
+                        }),
+                  ),
                 ],
               ),
             ),
