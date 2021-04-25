@@ -120,12 +120,15 @@ class _TodoList extends State<TodoList> {
 
                   return ListTile(
                     contentPadding: EdgeInsets.fromLTRB(0, 2, 2, 16),
-                    title: Text(todo.summary),
-                    leading: Container(
-                      width: 4.0,
-                      decoration: BoxDecoration(color: getColor(context, todo)),
-                    ),
-                    trailing: Checkbox(
+                    title: Text(todo.summary,
+                        style: TextStyle(
+                          color: todo.done
+                              ? Theme.of(context).disabledColor
+                              : null,
+                        )),
+                    leading: Checkbox(
+                      fillColor:
+                          MaterialStateProperty.all(getColor(context, todo)),
                       value: todo.done,
                       onChanged: (newValue) {
                         todo.setDone(newValue);
