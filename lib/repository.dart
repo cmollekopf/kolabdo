@@ -246,9 +246,9 @@ class Repository {
 
   static Future<bool> test(
       String server, String username, String password) async {
-    print("Testing $server, $username, $password");
+    print("Testing $server, $username");
     var newClient =
-        CalDavClient(server, username, password, '/', protocol: 'https');
+        CalDavClient(Uri.parse("https://${server}"), username, password);
     return await newClient.checkConnection();
   }
 
@@ -280,9 +280,8 @@ class Repository {
     }
 
     print("Logging in as ${account.username}");
-    _client = CalDavClient(
-        account.server, account.username, account.password, '/',
-        protocol: 'https');
+    _client = CalDavClient(Uri.parse("https://${account.server}"),
+        account.username, account.password);
 
     //We're not waiting for these to complete
     fetchCalendars().then((calendars) {
