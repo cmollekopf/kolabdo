@@ -168,6 +168,18 @@ class _App extends State<KolabDo> {
                   ],
                 ),
               ],
+              bottom: PreferredSize(
+                preferredSize: Size(double.infinity, 1.0),
+                child: StreamBuilder(
+                    stream: repository.operationInProgress(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data) {
+                        return LinearProgressIndicator();
+                      } else {
+                        return Container();
+                      }
+                    }),
+              ),
             ),
             floatingActionButton: FloatingActionButton(
               onPressed: () {

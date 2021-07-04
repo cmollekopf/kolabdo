@@ -161,11 +161,13 @@ class Repository {
   List<Calendar> _calendars = [];
   Set<String> _enabledCalendars = Set<String>();
   Queue<ReplayOperation> _replayQueue = Queue<ReplayOperation>();
+  bool _operationInProgress = false;
 
   Calendar currentCalendar = null;
 
   StreamController<List<Todo>> _streamController;
   StreamController<List<Calendar>> _calendarStreamController;
+  StreamController<bool> _operationInProgressController;
 
   get rawTodos => _todos;
 
@@ -263,6 +265,10 @@ class Repository {
     _calendarStreamController = StreamController<List<Calendar>>.broadcast(
         //Immediately provide the latest cached snapshot when somebody starts listening.
         onListen: () => _calendarStreamController.add(_calendars));
+
+    _operationInProgressController = StreamController<bool>.broadcast(
+        onListen: () =>
+            _operationInProgressController.add(_operationInProgress));
 
     //Load current calendar
     await storage.ready;
@@ -372,6 +378,10 @@ class Repository {
     return calendars;
   }
 
+  Stream<bool> operationInProgress() {
+    return _operationInProgressController.stream;
+  }
+
   Stream<List<Todo>> todos() {
     return _streamController.stream.map((list) {
       list.sort((b, a) {
@@ -404,13 +414,22 @@ class Repository {
     ;
   }
 
+  void _setInProgress(bool state) {
+    _operationInProgress = state;
+    _operationInProgressController.add(state);
+  }
+
   Future<List<Todo>> fetchTodos(Calendar calendar) async {
     //Load from server
     if (calendar == null || _client == null) {
       return [];
     }
 
+    _setInProgress(true);
+
     var entries = await _client.getEntries(calendar.path);
+
+    _setInProgress(false);
 
     List<Todo> todos = [];
     for (var entry in entries) {
