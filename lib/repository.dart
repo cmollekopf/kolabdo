@@ -427,6 +427,10 @@ class Repository {
 
     _setInProgress(true);
 
+    List<String> protectedEntries = _replayQueue.map((ReplayOperation operation) {
+        return operation.todo.id;
+    }).toList();
+
     var entries = await _client.getEntries(calendar.path);
 
     _setInProgress(false);
@@ -434,7 +438,13 @@ class Repository {
     List<Todo> todos = [];
     for (var entry in entries) {
       print("Todo ${entry.data}");
-      todos.add(Todo.fromICal(entry.data, entry.path));
+      var todo = Todo.fromICal(entry.data, entry.path);
+      //Protect local items with pending operations
+      if (protectedEntries.contains(todo.id)) {
+        print("Skipping protected entry ${todo.id}");
+      } else {
+        todos.add(todo);
+      }
     }
 
     _todos = todos;
