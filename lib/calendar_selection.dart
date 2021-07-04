@@ -153,15 +153,17 @@ class CalendarList extends StatelessWidget {
               itemCount: calendars.length,
               itemBuilder: (context, index) {
                 Calendar calendar = calendars[index];
+                var isEnabled = repository.isEnabled(calendar);
 
                 return ListTile(
                   leading: (editEnabled
-                      ? Checkbox(
-                          value: repository.isEnabled(calendar),
-                          onChanged: (bool value) {
-                            onCalendarEnabled(calendar, value);
-                          },
-                        )
+                      ? IconButton(
+                          icon: (isEnabled
+                              ? Icon(Icons.favorite)
+                              : Icon(Icons.favorite_outline)),
+                          onPressed: () {
+                            onCalendarEnabled(calendar, !isEnabled);
+                          })
                       : Icon(Icons.chevron_right)),
                   title: Text(calendar.name),
                   selected:
