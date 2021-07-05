@@ -1,5 +1,6 @@
 // @dart=2.9
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:random_color/random_color.dart';
 import 'todo.dart';
@@ -19,7 +20,19 @@ class TodoList extends StatefulWidget {
 
 class _TodoList extends State<TodoList> {
   List<Color> _randomColors;
-  List<int> _removalInProgress = [];
+  List<Todo> _stagedUpdates = [];
+
+  Timer _updateTimeout;
+
+  void processUpdates() {
+    Repository _repository = widget.repository;
+    for (var todo in _stagedUpdates) {
+      todo.setDone(!todo.done);
+      _repository.updateTodo(todo);
+    }
+    _stagedUpdates = [];
+    _updateTimeout.cancel();
+  }
 
   List<Color> initializeColors() {
     //Fixed a seed that seems to result in decent colors
@@ -39,6 +52,13 @@ class _TodoList extends State<TodoList> {
   void initState() {
     super.initState();
     _randomColors = initializeColors();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _updateTimeout.cancel();
+    processUpdates();
   }
 
   @override
@@ -62,19 +82,11 @@ class _TodoList extends State<TodoList> {
                   itemCount: snapshot.data.length,
                   itemBuilder: (BuildContext ctx, index) {
                     Todo todo = snapshot.data[index];
-                    var removing = _removalInProgress.contains(index);
+                    bool removing = _stagedUpdates.contains(todo);
                     return AnimatedOpacity(
                       opacity: removing ? 0.1 : 1.0,
-                      duration: const Duration(milliseconds: 500),
+                      duration: const Duration(milliseconds: 300),
                       curve: Curves.fastOutSlowIn,
-                      onEnd: () async {
-                        if (_removalInProgress.contains(index)) {
-                          //The modification is going to rebuild this anyways, so setState is not necessary
-                          _removalInProgress.remove(index);
-                          todo.setDone(!todo.done);
-                          _repository.updateTodo(todo);
-                        }
-                      },
                       child: Card(
                         color: getColor(context, todo),
                         child: InkWell(
@@ -100,7 +112,16 @@ class _TodoList extends State<TodoList> {
                           onTap: () async {
                             //We fade out the item, so we don't remove it immediately
                             setState(() {
-                              _removalInProgress.add(index);
+                              _stagedUpdates.add(todo);
+
+                              // Stage updates with some delay. This allows tapping several items before the layout changes.
+                              if (_updateTimeout != null) {
+                                _updateTimeout.cancel();
+                              }
+                              _updateTimeout =
+                                  Timer(const Duration(milliseconds: 500), () {
+                                processUpdates();
+                              });
                             });
                           },
                           onLongPress: () => Navigator.pushNamed(
