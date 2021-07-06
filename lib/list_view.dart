@@ -23,6 +23,7 @@ class _TodoList extends State<TodoList> {
   List<Todo> _stagedUpdates = [];
 
   Timer _updateTimeout;
+  int _fadeOutDuration = 600;
 
   void processUpdates() {
     Repository _repository = widget.repository;
@@ -85,7 +86,7 @@ class _TodoList extends State<TodoList> {
                     bool removing = _stagedUpdates.contains(todo);
                     return AnimatedOpacity(
                       opacity: removing ? 0.1 : 1.0,
-                      duration: const Duration(milliseconds: 300),
+                      duration: Duration(milliseconds: _fadeOutDuration),
                       curve: Curves.fastOutSlowIn,
                       child: Card(
                         color: getColor(context, todo),
@@ -119,7 +120,7 @@ class _TodoList extends State<TodoList> {
                                 _updateTimeout.cancel();
                               }
                               _updateTimeout =
-                                  Timer(const Duration(milliseconds: 500), () {
+                                  Timer(Duration(milliseconds: _fadeOutDuration + 100), () {
                                 processUpdates();
                               });
                             });
