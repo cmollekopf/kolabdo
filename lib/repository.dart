@@ -142,6 +142,33 @@ class ReplayOperation {
   final Todo todo;
 }
 
+/**
+  A wrapper around a stream that also caches the latest value
+*/
+class Provider<T> {
+  Provider() {
+    this._controller = StreamController<T>.broadcast(
+        //Immediately provide the latest cached snapshot when somebody starts listening.
+        onListen: () => _controller.add(_value));
+  }
+
+  T _value;
+
+  T get value => _value;
+  Stream<T> get stream => _controller.stream;
+
+  notify() {
+    _controller.add(_value);
+  }
+
+  update(T value) {
+    _value = value;
+    notify();
+  }
+
+  StreamController<T> _controller;
+}
+
 class Repository {
   bool _showDoing = false;
 
@@ -157,19 +184,16 @@ class Repository {
     ready = init();
   }
 
-  List<Todo> _todos = [];
-  List<Calendar> _calendars = [];
   Set<String> _enabledCalendars = Set<String>();
   Queue<ReplayOperation> _replayQueue = Queue<ReplayOperation>();
-  bool _operationInProgress = false;
 
   Calendar currentCalendar = null;
 
-  StreamController<List<Todo>> _streamController;
-  StreamController<List<Calendar>> _calendarStreamController;
-  StreamController<bool> _operationInProgressController;
+  Provider<List<Todo>> _todoProvider;
+  Provider<List<Calendar>> _calendarProvider;
+  Provider<bool> _operationInProgressProvider;
 
-  get rawTodos => _todos;
+  get rawTodos => _todoProvider.value;
 
   Future<void> processQueue() {
     if (_client == null) {
@@ -208,42 +232,42 @@ class Repository {
   }
 
   Future<void> createTodo(todo) async {
-    _todos.add(todo);
-    _streamController.add(_todos);
+    _todoProvider._value.add(todo);
+    _todoProvider.notify();
 
     print("Updating entry ${todo.path}");
     enqueue(ReplayOperation(ReplayType.create, todo));
-    await _saveToStorage();
+    await _saveToStorage(_todoProvider._value);
   }
 
   Future<void> updateTodo(todo) async {
-    int index = _todos.indexOf(todo);
+    int index = _todoProvider._value.indexOf(todo);
     if (index < 0) {
       print("Failed to find entry");
       return;
     }
 
-    _todos[index] = todo;
-    _streamController.add(_todos);
+    _todoProvider._value[index] = todo;
+    _todoProvider.notify();
 
     print("Updating entry ${todo.path}");
     enqueue(ReplayOperation(ReplayType.modify, todo));
-    await _saveToStorage();
+    await _saveToStorage(_todoProvider._value);
   }
 
   Future<void> removeTodo(todo) async {
-    int index = _todos.indexOf(todo);
+    int index = _todoProvider._value.indexOf(todo);
     if (index < 0) {
       print("Failed to find entry");
       return;
     }
 
-    _todos.removeAt(index);
-    _streamController.add(_todos);
+    _todoProvider._value.removeAt(index);
+    _todoProvider.notify();
 
     print("Removing entry ${todo.path}");
     enqueue(ReplayOperation(ReplayType.delete, todo));
-    await _saveToStorage();
+    await _saveToStorage(_todoProvider._value);
   }
 
   static Future<bool> test(
@@ -258,17 +282,9 @@ class Repository {
     print("Initializing repository ${account.id}");
     storage = LocalStorage("${account.id}_cache.json");
 
-    _streamController = StreamController<List<Todo>>.broadcast(
-        //Immediately provide the latest cached snapshot when somebody starts listening.
-        onListen: () => _streamController.add(_todos));
-
-    _calendarStreamController = StreamController<List<Calendar>>.broadcast(
-        //Immediately provide the latest cached snapshot when somebody starts listening.
-        onListen: () => _calendarStreamController.add(_calendars));
-
-    _operationInProgressController = StreamController<bool>.broadcast(
-        onListen: () =>
-            _operationInProgressController.add(_operationInProgress));
+    _todoProvider = Provider<List<Todo>>();
+    _calendarProvider = Provider<List<Calendar>>();
+    _operationInProgressProvider = Provider<bool>();
 
     //Load current calendar
     await storage.ready;
@@ -276,8 +292,8 @@ class Repository {
     var current = storage.getItem("currentCalendar");
     if (current != null) {
       currentCalendar = Calendar.fromJSONEncodable(current);
-      _streamController.add(await _loadFromStorage());
-      _calendarStreamController.add(await _loadCalendarsFromStorage());
+      _todoProvider.update(await _loadFromStorage());
+      _calendarProvider.update(await _loadCalendarsFromStorage());
     }
 
     var enabled = storage.getItem("enabledCalendars");
@@ -291,10 +307,10 @@ class Repository {
 
     //We're not waiting for these to complete
     fetchCalendars().then((calendars) {
-      _calendarStreamController.add(calendars);
+      _calendarProvider.update(calendars);
     });
     fetchTodos(currentCalendar).then((todos) {
-      _streamController.add(todos);
+      _todoProvider.update(todos);
     });
   }
 
@@ -303,40 +319,39 @@ class Repository {
     await storage.setItem("currentCalendar", currentCalendar.toJSONEncodable());
 
     //Reset to empty list
-    _todos = [];
-    _streamController.add(_todos);
+    _todoProvider.update([]);
 
     //Start both operations in parallel, but await before completing
     var cached = _loadFromStorage();
     var remote = fetchTodos(calendar);
-    _streamController.add(await cached);
-    _streamController.add(await remote);
+    _todoProvider.update(await cached);
+    _todoProvider.update(await remote);
   }
 
   set showDoing(show) {
     _showDoing = show;
     //Reload todos (we're just filtering locally)
-    _streamController.add(_todos);
+    _todoProvider.notify();
   }
 
   get showDoing => _showDoing;
 
   Future<void> refreshAll() async {
-    _streamController.add(await fetchTodos(currentCalendar));
+    _todoProvider.update(await fetchTodos(currentCalendar));
   }
 
   Future<void> refresh() async {
-    _streamController.add(await fetchTodos(currentCalendar));
+    _todoProvider.update(await fetchTodos(currentCalendar));
   }
 
   Future<void> refreshCalendars() async {
-    _calendarStreamController.add(await fetchCalendars());
+    _calendarProvider.update(await fetchCalendars());
   }
 
-  _saveToStorage() async {
+  _saveToStorage(List<Todo> todos) async {
     await storage.setItem(
         "todos${currentCalendar.path}",
-        _todos.map((todo) {
+        todos.map((todo) {
           return todo.toJSONEncodable();
         }).toList());
   }
@@ -353,14 +368,13 @@ class Repository {
         })
         .where((t) => t.id != null)
         .toList();
-    _todos = todos;
     return todos;
   }
 
-  _saveCalendarsToStorage() async {
+  _saveCalendarsToStorage(List<Calendar> calendars) async {
     await storage.setItem(
         "calendars",
-        _calendars.map((calendar) {
+        calendars.map((calendar) {
           return calendar.toJSONEncodable();
         }).toList());
   }
@@ -374,16 +388,15 @@ class Repository {
         })
         .where((t) => t.path != null)
         .toList();
-    _calendars = calendars;
     return calendars;
   }
 
   Stream<bool> operationInProgress() {
-    return _operationInProgressController.stream;
+    return _operationInProgressProvider.stream;
   }
 
   Stream<List<Todo>> todos() {
-    return _streamController.stream.map((list) {
+    return _todoProvider._controller.stream.map((list) {
       list.sort((b, a) {
         if (a.id == b.id) return 0;
         if (a.done && !b.done) return -1;
@@ -408,15 +421,14 @@ class Repository {
   }
 
   Stream<List<Calendar>> calendars({bool showEnabled = false}) {
-    return _calendarStreamController.stream.map((list) {
+    return _calendarProvider.stream.map((list) {
       return list.where((c) => !showEnabled || isEnabled(c)).toList();
     });
     ;
   }
 
   void _setInProgress(bool state) {
-    _operationInProgress = state;
-    _operationInProgressController.add(state);
+    _operationInProgressProvider.update(state);
   }
 
   Future<List<Todo>> fetchTodos(Calendar calendar) async {
@@ -448,8 +460,7 @@ class Repository {
       }
     }
 
-    _todos = todos;
-    await _saveToStorage();
+    await _saveToStorage(todos);
     return todos;
   }
 
@@ -472,8 +483,7 @@ class Repository {
       setCalendar(calendars[0]);
     }
 
-    _calendars = calendars;
-    _saveCalendarsToStorage();
+    _saveCalendarsToStorage(calendars);
 
     return calendars;
   }
@@ -481,13 +491,13 @@ class Repository {
   Future<void> removeCompleted() async {
     List<Todo> list = await _loadFromStorage();
     var completed = list.where((todo) => todo.done).toList();
-    _todos.removeWhere((t) => completed.contains(t));
-    _streamController.add(_todos);
+    var other = list.where((todo) => !todo.done).toList();
+    _todoProvider.update(other);
     for (Todo todo in completed) {
       print("Removing ${todo.path}");
       enqueue(ReplayOperation(ReplayType.delete, todo));
     }
 
-    await _saveToStorage();
+    await _saveToStorage(other);
   }
 }
