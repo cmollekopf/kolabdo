@@ -213,7 +213,7 @@ class Repository {
 
     print("Updating entry ${todo.path}");
     enqueue(ReplayOperation(ReplayType.create, todo));
-    _saveToStorage();
+    await _saveToStorage();
   }
 
   Future<void> updateTodo(todo) async {
@@ -228,7 +228,7 @@ class Repository {
 
     print("Updating entry ${todo.path}");
     enqueue(ReplayOperation(ReplayType.modify, todo));
-    _saveToStorage();
+    await _saveToStorage();
   }
 
   Future<void> removeTodo(todo) async {
@@ -243,7 +243,7 @@ class Repository {
 
     print("Removing entry ${todo.path}");
     enqueue(ReplayOperation(ReplayType.delete, todo));
-    _saveToStorage();
+    await _saveToStorage();
   }
 
   static Future<bool> test(
@@ -300,7 +300,7 @@ class Repository {
 
   Future<void> setCalendar(Calendar calendar) async {
     currentCalendar = calendar;
-    storage.setItem("currentCalendar", currentCalendar.toJSONEncodable());
+    await storage.setItem("currentCalendar", currentCalendar.toJSONEncodable());
 
     //Reset to empty list
     _todos = [];
@@ -333,8 +333,8 @@ class Repository {
     _calendarStreamController.add(await fetchCalendars());
   }
 
-  _saveToStorage() {
-    storage.setItem(
+  _saveToStorage() async {
+    await storage.setItem(
         "todos${currentCalendar.path}",
         _todos.map((todo) {
           return todo.toJSONEncodable();
@@ -357,8 +357,8 @@ class Repository {
     return todos;
   }
 
-  _saveCalendarsToStorage() {
-    storage.setItem(
+  _saveCalendarsToStorage() async {
+    await storage.setItem(
         "calendars",
         _calendars.map((calendar) {
           return calendar.toJSONEncodable();
@@ -398,13 +398,13 @@ class Repository {
     return _enabledCalendars.contains(calendar.path);
   }
 
-  void setEnabled(Calendar calendar, bool value) {
+  void setEnabled(Calendar calendar, bool value) async {
     if (value) {
       _enabledCalendars.add(calendar.path);
     } else {
       _enabledCalendars.remove(calendar.path);
     }
-    storage.setItem("enabledCalendars", _enabledCalendars.toList());
+    await storage.setItem("enabledCalendars", _enabledCalendars.toList());
   }
 
   Stream<List<Calendar>> calendars({bool showEnabled = false}) {
@@ -427,8 +427,9 @@ class Repository {
 
     _setInProgress(true);
 
-    List<String> protectedEntries = _replayQueue.map((ReplayOperation operation) {
-        return operation.todo.id;
+    List<String> protectedEntries =
+        _replayQueue.map((ReplayOperation operation) {
+      return operation.todo.id;
     }).toList();
 
     var entries = await _client.getEntries(calendar.path);
@@ -438,7 +439,7 @@ class Repository {
     List<Todo> todos = [];
     for (var entry in entries) {
       print("Todo ${entry.data}");
-      var todo = Todo.fromICal(entry.data, entry.path);
+      Todo todo = Todo.fromICal(entry.data, entry.path);
       //Protect local items with pending operations
       if (protectedEntries.contains(todo.id)) {
         print("Skipping protected entry ${todo.id}");
@@ -448,7 +449,7 @@ class Repository {
     }
 
     _todos = todos;
-    _saveToStorage();
+    await _saveToStorage();
     return todos;
   }
 
@@ -487,6 +488,6 @@ class Repository {
       enqueue(ReplayOperation(ReplayType.delete, todo));
     }
 
-    _saveToStorage();
+    await _saveToStorage();
   }
 }

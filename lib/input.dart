@@ -40,7 +40,7 @@ class _TodoInput extends State<TodoInput> {
     });
   }
 
-  void addTodo(text) {
+  void addTodo(text) async {
     //If there is an existing completed todo with the same summary, we simply set it to not done
     Iterable<Todo> existing = _repository.rawTodos.where((Todo todo) {
       if (todo.summary == _textInputController.text) {
@@ -53,7 +53,7 @@ class _TodoInput extends State<TodoInput> {
       t.done = false;
       _repository.updateTodo(t);
     } else {
-      _repository.createTodo(Todo.newTodo(text, _currentCalendar.path,
+      await _repository.createTodo(Todo.newTodo(text, _currentCalendar.path,
           isDoing: _repository.showDoing));
     }
     _textInputController.clear();
@@ -90,8 +90,8 @@ class _TodoInput extends State<TodoInput> {
                 return ChoiceChip(
                   label: Text(_suggestions[index]),
                   selected: false,
-                  onSelected: (bool selected) {
-                    addTodo(_suggestions[index]);
+                  onSelected: (bool selected) async {
+                    await addTodo(_suggestions[index]);
                   },
                 );
               },
@@ -105,14 +105,14 @@ class _TodoInput extends State<TodoInput> {
                       autofocus: true,
                       decoration: InputDecoration(
                           border: OutlineInputBorder(), hintText: 'Add a todo'),
-                      onSubmitted: (text) {
-                        addTodo(text);
+                      onSubmitted: (text) async {
+                        await addTodo(text);
                         //TODO refocus the edit instead of pop
                         Navigator.pop(context);
                       })),
               ElevatedButton(
                 child: Icon(Icons.add),
-                onPressed: () => addTodo(_textInputController.text),
+                onPressed: () async => await addTodo(_textInputController.text),
                 style: ElevatedButton.styleFrom(
                   shape: CircleBorder(),
                 ),

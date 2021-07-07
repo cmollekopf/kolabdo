@@ -25,14 +25,16 @@ class _TodoList extends State<TodoList> {
   Timer _updateTimeout;
   int _fadeOutDuration = 600;
 
-  void processUpdates() {
+  void processUpdates() async {
     Repository _repository = widget.repository;
     for (var todo in _stagedUpdates) {
       todo.setDone(!todo.done);
-      _repository.updateTodo(todo);
+      await _repository.updateTodo(todo);
     }
-    _stagedUpdates = [];
-    _updateTimeout.cancel();
+    setState(() {
+      _updateTimeout.cancel();
+      _stagedUpdates = [];
+    });
   }
 
   List<Color> initializeColors() {
@@ -119,9 +121,11 @@ class _TodoList extends State<TodoList> {
                               if (_updateTimeout != null) {
                                 _updateTimeout.cancel();
                               }
-                              _updateTimeout =
-                                  Timer(Duration(milliseconds: _fadeOutDuration + 100), () {
-                                processUpdates();
+                              _updateTimeout = Timer(
+                                  Duration(
+                                      milliseconds: _fadeOutDuration + 100),
+                                  () async {
+                                await processUpdates();
                               });
                             });
                           },
@@ -152,9 +156,9 @@ class _TodoList extends State<TodoList> {
                       fillColor:
                           MaterialStateProperty.all(getColor(context, todo)),
                       value: todo.done,
-                      onChanged: (newValue) {
+                      onChanged: (newValue) async {
                         todo.setDone(newValue);
-                        _repository.updateTodo(todo);
+                        await _repository.updateTodo(todo);
                       },
                     ),
                     onTap: () => Navigator.pushNamed(context, '/todo',
