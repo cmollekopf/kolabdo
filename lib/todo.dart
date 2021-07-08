@@ -22,9 +22,28 @@ class TodoView extends StatefulWidget {
 class _TodoView extends State<TodoView> {
   Todo todo;
   Repository _repository;
+  TextEditingController _summaryController;
+  TextEditingController _descriptionController;
+  FocusNode _focusNode;
 
   String unescape(String s) {
     return s.replaceAll("\\n", "\n");
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _summaryController = TextEditingController();
+    _descriptionController = TextEditingController();
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _summaryController.dispose();
+    _descriptionController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -32,10 +51,14 @@ class _TodoView extends State<TodoView> {
     final TodoArguments args = ModalRoute.of(context).settings.arguments;
 
     todo = args.todo;
+
     _repository = args.repository;
     String description = todo.description ?? "";
     description =
         description.isEmpty ? "No description." : unescape(description);
+
+    _summaryController.text = todo.summary;
+    _descriptionController.text = description;
 
     return Scaffold(
       appBar: AppBar(title: Text("Details", maxLines: 2), actions: <Widget>[
@@ -75,12 +98,50 @@ class _TodoView extends State<TodoView> {
           child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
-          Text(
-            todo.summary,
+          TextField(
+            decoration: InputDecoration(
+              labelText: 'Summary',
+            ),
+            controller: _summaryController,
+            onSubmitted: (String value) async {
+              _focusNode.requestFocus();
+            },
             style: Theme.of(context).textTheme.title,
           ),
           SizedBox(height: 16),
-          Text(description),
+          TextField(
+            focusNode: _focusNode,
+            keyboardType: TextInputType.multiline,
+            maxLines: null,
+            decoration: InputDecoration(
+              labelText: 'Description',
+            ),
+            controller: _descriptionController,
+          ),
+          ButtonBar(children: [
+            OutlinedButton(
+              style: TextButton.styleFrom(
+                textStyle: const TextStyle(fontSize: 20),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Discard'),
+            ),
+            ElevatedButton(
+              style: TextButton.styleFrom(
+                textStyle: const TextStyle(fontSize: 20),
+              ),
+              onPressed: () {
+                var modified = todo;
+                modified.summary = _summaryController.text;
+                modified.description = _descriptionController.text;
+                _repository.updateTodo(modified);
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ]),
         ]),
       )),
     );
