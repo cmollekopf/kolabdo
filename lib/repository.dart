@@ -480,7 +480,11 @@ class Repository {
     }
 
     if (currentCalendar == null && !calendars.isEmpty) {
-      setCalendar(calendars[0]);
+        for (var calendar in calendars) {
+            if (isEnabled(calendar)) {
+                setCalendar(calendar);
+            }
+        }
     }
 
     _saveCalendarsToStorage(calendars);
