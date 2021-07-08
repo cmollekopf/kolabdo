@@ -39,6 +39,7 @@ class Todo {
     this.dateTime = DateTime.now().toUtc();
     this.done = false;
     this.path = path + this.id + ".ics";
+    this.sequence = 1;
     this.json = {
       'VTODO': [
         {
@@ -46,6 +47,7 @@ class Todo {
           'SUMMARY': this.summary,
           'DTSTAMP': formatDateTime(this.dateTime),
           'STATUS': 'NEEDS-ACTION',
+          'SEQUENCE': '1',
         },
       ],
     };
@@ -62,6 +64,7 @@ class Todo {
       this.summary = t['SUMMARY'];
       this.description = t['DESCRIPTION'];
       this.dateTime = DateTime.parse(t['DTSTAMP']);
+      this.sequence = int.parse(t['SEQUENCE']);
       this.done = t['STATUS'] == 'COMPLETED';
       this.doing = t['STATUS'] == 'IN-PROCESS';
       this.json = json;
@@ -129,6 +132,7 @@ class Todo {
   DateTime dateTime = DateTime.now();
   bool done = false;
   bool doing = false;
+  int sequence = 0;
 
   Map<String, dynamic> json;
   String path;
@@ -247,6 +251,8 @@ class Repository {
       return;
     }
 
+    todo.sequence += 1;
+
     _todoProvider._value[index] = todo;
     _todoProvider.notify();
 
@@ -335,10 +341,6 @@ class Repository {
   }
 
   get showDoing => _showDoing;
-
-  Future<void> refreshAll() async {
-    _todoProvider.update(await fetchTodos(currentCalendar));
-  }
 
   Future<void> refresh() async {
     _todoProvider.update(await fetchTodos(currentCalendar));
@@ -439,11 +441,6 @@ class Repository {
 
     _setInProgress(true);
 
-    List<String> protectedEntries =
-        _replayQueue.map((ReplayOperation operation) {
-      return operation.todo.id;
-    }).toList();
-
     var entries = await _client.getEntries(calendar.path);
 
     _setInProgress(false);
@@ -452,12 +449,19 @@ class Repository {
     for (var entry in entries) {
       print("Todo ${entry.data}");
       Todo todo = Todo.fromICal(entry.data, entry.path);
-      //Protect local items with pending operations
-      if (protectedEntries.contains(todo.id)) {
-        print("Skipping protected entry ${todo.id}");
-      } else {
-        todos.add(todo);
+
+      //Check if we have a newer entry locally already.
+      for (var t in _todoProvider.value) {
+          if (todo.id == t.id) {
+              if (t.sequence > todo.sequence) {
+                  //If we do, we keep that instead.
+                  todo = t;
+              }
+              break;
+          }
       }
+
+        todos.add(todo);
     }
 
     await _saveToStorage(todos);
