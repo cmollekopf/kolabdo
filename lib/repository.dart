@@ -441,32 +441,63 @@ class Repository {
   }
 
   Future<void> updateTodos(Calendar calendar) async {
-    fetchTodos(calendar, etagsOnly: true).then((todos) async {
-      var localTodos = Map.fromIterable(_todoProvider._value, key: (t) => t.path, value: (t) => t);
-      var toFetch = List<String>();
-      var newList = List<Todo>();
-      for(var remoteTodo in todos) {
-        if (localTodos.containsKey(remoteTodo.path)) {
-            var local = localTodos[remoteTodo.path];
-            //Modified
-            if (remoteTodo.etag != local.etag) {
-                toFetch.add(remoteTodo.path);
-            } else {
-                newList.add(local);
+    final stopwatch = Stopwatch()..start();
+
+    //Just fetch everything
+    await fetchTodos(calendar).then((todos) async {
+      print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
+      var newList = todos.map((Todo todo) {
+        //Check if we have a newer entry locally already.
+        for (var t in _todoProvider.value) {
+          if (todo.id == t.id) {
+            if (t.sequence > todo.sequence) {
+              //If we do, we keep that instead.
+              return t;
             }
-        } else { //New
-            toFetch.add(remoteTodo.path);
+            break;
+          }
         }
-      }
-      print("Items to fetch ${toFetch}");
-      await fetchTodos(calendar, hrefs: toFetch).then((todos) async {
-        newList.addAll(todos);
-        _todoProvider.update(newList);
-      });
+        return todo;
+      }).toList();
+
+      await _saveToStorage(newList);
+      _todoProvider.update(newList);
     });
+
+    //This turns out to be slower than just fetching everything in a single request every time.
+    ////Only fetch what we need to fetch, but in two queries
+    //await fetchTodos(calendar, etagsOnly: true).then((todos) async {
+    //  print('fetched hrefs in ${stopwatch.elapsed.inMilliseconds}');
+    //  var localTodos = Map.fromIterable(_todoProvider._value,
+    //      key: (t) => t.path, value: (t) => t);
+    //  var toFetch = List<String>();
+    //  var newList = List<Todo>();
+    //  for (var remoteTodo in todos) {
+    //    if (localTodos.containsKey(remoteTodo.path)) {
+    //      var local = localTodos[remoteTodo.path];
+    //      //Modified
+    //      if (remoteTodo.etag != local.etag) {
+    //        toFetch.add(remoteTodo.path);
+    //      } else {
+    //        newList.add(local);
+    //      }
+    //    } else {
+    //      //New
+    //      toFetch.add(remoteTodo.path);
+    //    }
+    //  }
+    //  await fetchTodos(calendar, hrefs: toFetch).then((todos) async {
+    //    print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
+    //    newList.addAll(todos);
+    //    await _saveToStorage(newList);
+    //    _todoProvider.update(newList);
+    //    print('Complete in ${stopwatch.elapsed.inMilliseconds}');
+    //  });
+    //});
   }
 
-  Future<List<Todo>> fetchTodos(Calendar calendar, {List<String> hrefs, bool etagsOnly = false}) async {
+  Future<List<Todo>> fetchTodos(Calendar calendar,
+      {List<String> hrefs, bool etagsOnly = false}) async {
     //Load from server
     if (calendar == null || _client == null) {
       return [];
@@ -474,38 +505,20 @@ class Repository {
 
     _setInProgress(true);
 
-    var entries = await _client.getEntries(calendar.path, hrefs: hrefs, etagsOnly: etagsOnly);
+    var entries = await _client.getEntries(calendar.path,
+        hrefs: hrefs, etagsOnly: etagsOnly);
 
     _setInProgress(false);
-
-    _replayQueue.map((ReplayOperation operation) {
-      print("In replay queue ${operation.todo.id}");
-    });
 
     List<Todo> todos = [];
     for (var entry in entries) {
       if (entry.data == null) {
         todos.add(Todo.fromEtag(entry.path, entry.etag));
-        continue;
+      } else {
+        todos.add(Todo.fromICal(entry.data, entry.path, entry.etag));
       }
-      Todo todo = Todo.fromICal(entry.data, entry.path, entry.etag);
-
-      //Check if we have a newer entry locally already.
-      //FIXME this is incompatible with the etag foo I think
-      //for (var t in _todoProvider.value) {
-      //    if (todo.id == t.id) {
-      //        if (t.sequence > todo.sequence) {
-      //            //If we do, we keep that instead.
-      //            todo = t;
-      //        }
-      //        break;
-      //    }
-      //}
-
-      todos.add(todo);
     }
 
-    await _saveToStorage(todos);
     return todos;
   }
 
@@ -525,11 +538,11 @@ class Repository {
     }
 
     if (currentCalendar == null && !calendars.isEmpty) {
-        for (var calendar in calendars) {
-            if (isEnabled(calendar)) {
-                setCalendar(calendar);
-            }
+      for (var calendar in calendars) {
+        if (isEnabled(calendar)) {
+          setCalendar(calendar);
         }
+      }
     }
 
     _saveCalendarsToStorage(calendars);
