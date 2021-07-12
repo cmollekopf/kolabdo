@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:core';
 import 'dart:collection';
 
 import 'package:uuid/uuid.dart';
@@ -56,10 +57,16 @@ class Todo {
 
   Todo.empty() {}
 
-  Todo.fromJson(json, href) {
+  Todo.fromEtag(href, etag) {
+    this.path = href;
+    this.etag = etag;
+  }
+
+  Todo.fromJson(json, href, etag) {
+    this.path = href;
+    this.etag = etag;
     if (json != null && json.containsKey('VTODO') && !json['VTODO'].isEmpty) {
       var t = json['VTODO'][0];
-      this.path = href;
       this.id = t['UID'];
       this.summary = t['SUMMARY'];
       this.description = t['DESCRIPTION'];
@@ -71,9 +78,9 @@ class Todo {
     }
   }
 
-  static Todo fromICal(ical, href) {
+  static Todo fromICal(ical, href, etag) {
     var parsed = ICal.toJson(ical);
-    return Todo.fromJson(parsed, href);
+    return Todo.fromJson(parsed, href, etag);
   }
 
   static void toBuffer(StringBuffer buffer, Map<String, dynamic> map) {
@@ -116,13 +123,14 @@ class Todo {
   }
 
   factory Todo.fromJSONEncodable(map) {
-    return Todo.fromJson(map['json'], map['path']);
+    return Todo.fromJson(map['json'], map['path'], map['etag']);
   }
 
   toJSONEncodable() {
     return {
       'json': json,
       'path': path,
+      'etag': etag,
     };
   }
 
@@ -133,6 +141,7 @@ class Todo {
   bool done = false;
   bool doing = false;
   int sequence = 0;
+  String etag;
 
   Map<String, dynamic> json;
   String path;
@@ -315,9 +324,7 @@ class Repository {
     fetchCalendars().then((calendars) {
       _calendarProvider.update(calendars);
     });
-    fetchTodos(currentCalendar).then((todos) {
-      _todoProvider.update(todos);
-    });
+    updateTodos(currentCalendar);
   }
 
   Future<void> setCalendar(Calendar calendar) async {
@@ -329,9 +336,9 @@ class Repository {
 
     //Start both operations in parallel, but await before completing
     var cached = _loadFromStorage();
-    var remote = fetchTodos(calendar);
+    var remote = updateTodos(calendar);
     _todoProvider.update(await cached);
-    _todoProvider.update(await remote);
+    await remote;
   }
 
   set showDoing(show) {
@@ -343,7 +350,7 @@ class Repository {
   get showDoing => _showDoing;
 
   Future<void> refresh() async {
-    _todoProvider.update(await fetchTodos(currentCalendar));
+    return updateTodos(currentCalendar);
   }
 
   Future<void> refreshCalendars() async {
@@ -433,7 +440,33 @@ class Repository {
     _operationInProgressProvider.update(state);
   }
 
-  Future<List<Todo>> fetchTodos(Calendar calendar) async {
+  Future<void> updateTodos(Calendar calendar) async {
+    fetchTodos(calendar, etagsOnly: true).then((todos) async {
+      var localTodos = Map.fromIterable(_todoProvider._value, key: (t) => t.path, value: (t) => t);
+      var toFetch = List<String>();
+      var newList = List<Todo>();
+      for(var remoteTodo in todos) {
+        if (localTodos.containsKey(remoteTodo.path)) {
+            var local = localTodos[remoteTodo.path];
+            //Modified
+            if (remoteTodo.etag != local.etag) {
+                toFetch.add(remoteTodo.path);
+            } else {
+                newList.add(local);
+            }
+        } else { //New
+            toFetch.add(remoteTodo.path);
+        }
+      }
+      print("Items to fetch ${toFetch}");
+      await fetchTodos(calendar, hrefs: toFetch).then((todos) async {
+        newList.addAll(todos);
+        _todoProvider.update(newList);
+      });
+    });
+  }
+
+  Future<List<Todo>> fetchTodos(Calendar calendar, {List<String> hrefs, bool etagsOnly = false}) async {
     //Load from server
     if (calendar == null || _client == null) {
       return [];
@@ -441,27 +474,35 @@ class Repository {
 
     _setInProgress(true);
 
-    var entries = await _client.getEntries(calendar.path);
+    var entries = await _client.getEntries(calendar.path, hrefs: hrefs, etagsOnly: etagsOnly);
 
     _setInProgress(false);
 
+    _replayQueue.map((ReplayOperation operation) {
+      print("In replay queue ${operation.todo.id}");
+    });
+
     List<Todo> todos = [];
     for (var entry in entries) {
-      print("Todo ${entry.data}");
-      Todo todo = Todo.fromICal(entry.data, entry.path);
+      if (entry.data == null) {
+        todos.add(Todo.fromEtag(entry.path, entry.etag));
+        continue;
+      }
+      Todo todo = Todo.fromICal(entry.data, entry.path, entry.etag);
 
       //Check if we have a newer entry locally already.
-      for (var t in _todoProvider.value) {
-          if (todo.id == t.id) {
-              if (t.sequence > todo.sequence) {
-                  //If we do, we keep that instead.
-                  todo = t;
-              }
-              break;
-          }
-      }
+      //FIXME this is incompatible with the etag foo I think
+      //for (var t in _todoProvider.value) {
+      //    if (todo.id == t.id) {
+      //        if (t.sequence > todo.sequence) {
+      //            //If we do, we keep that instead.
+      //            todo = t;
+      //        }
+      //        break;
+      //    }
+      //}
 
-        todos.add(todo);
+      todos.add(todo);
     }
 
     await _saveToStorage(todos);
