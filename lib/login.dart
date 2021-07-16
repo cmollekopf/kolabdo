@@ -72,6 +72,7 @@ class LoginDialogState extends State<LoginDialog> {
                       },
                     ),
                     TextFormField(
+                      keyboardType: TextInputType.emailAddress,
                       onSaved: (String value) {
                         username = value;
                       },
@@ -88,6 +89,7 @@ class LoginDialogState extends State<LoginDialog> {
                       },
                     ),
                     TextFormField(
+                      keyboardType: TextInputType.visiblePassword,
                       onSaved: (String value) {
                         password = value;
                       },
