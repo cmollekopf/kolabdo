@@ -41,6 +41,7 @@ dependencies:
   uuid: ^2.0.0
   intl: ^0.17.0
   random_color: ^1.0.5
+  android_intent_plus: ^1.0.2
 
 dev_dependencies:
   flutter_launcher_icons: "^0.8.0"

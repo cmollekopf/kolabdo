@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
+import 'package:platform/platform.dart';
 
 import 'list_view.dart';
 import 'repository.dart';
@@ -64,6 +67,17 @@ class _App extends State<KolabDo> {
       case 'clear-completed':
         {
           await repository.removeCompleted();
+        }
+        break;
+      case 'update':
+        if (const LocalPlatform().isAndroid) {
+          AndroidIntent intent = AndroidIntent(
+            action: 'action_view',
+            data:
+                'https://github.com/cmollekopf/kolabdo/releases/latest/download/kolabdo.apk',
+            flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+          );
+          await intent.launch();
         }
         break;
       case 'doing':
@@ -164,6 +178,10 @@ class _App extends State<KolabDo> {
                     const PopupMenuItem<String>(
                       value: 'clear-completed',
                       child: Text('Clear completed'),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'update',
+                      child: Text('Update'),
                     ),
                   ],
                 ),
