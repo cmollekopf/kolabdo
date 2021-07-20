@@ -45,6 +45,7 @@ class KolabDo extends StatefulWidget {
 class _App extends State<KolabDo> {
   Future<Repository> _repository;
   bool _showGrid = true;
+  GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
 
   @override
   void initState() {
@@ -148,6 +149,7 @@ class _App extends State<KolabDo> {
           Repository repository = snapshot.data;
 
           return Scaffold(
+            key: _scaffoldKey,
             appBar: AppBar(
               title: Text(repository.currentCalendar?.name ?? widget.title),
               actions: <Widget>[
@@ -253,13 +255,18 @@ class _App extends State<KolabDo> {
                 ],
               ),
             ),
-            body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TodoList(
-                  calendar: repository.currentCalendar,
-                  repository: repository,
-                  showGrid: _showGrid),
-            ),
+            body: repository.currentCalendar != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TodoList(
+                        calendar: repository.currentCalendar,
+                        repository: repository,
+                        showGrid: _showGrid))
+                : Center(
+                    child: ElevatedButton(
+                    child: Text("Select Calendars"),
+                    onPressed: () => _scaffoldKey.currentState.openDrawer(),
+                  )),
           );
         });
   }

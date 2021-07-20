@@ -433,7 +433,6 @@ class Repository {
     return _calendarProvider.stream.map((list) {
       return list.where((c) => !showEnabled || isEnabled(c)).toList();
     });
-    ;
   }
 
   void _setInProgress(bool state) {
@@ -441,6 +440,11 @@ class Repository {
   }
 
   Future<void> updateTodos(Calendar calendar) async {
+    //This can apparently happen when first logging in.
+    await ready;
+    if (calendar == null) {
+      return;
+    }
     final stopwatch = Stopwatch()..start();
 
     //Just fetch everything
