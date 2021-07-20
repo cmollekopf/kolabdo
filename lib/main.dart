@@ -66,9 +66,7 @@ class _App extends State<KolabDo> {
     Repository repository = await _repository;
     switch (value) {
       case 'clear-completed':
-        {
-          await repository.removeCompleted();
-        }
+        await repository.removeCompleted();
         break;
       case 'update':
         if (const LocalPlatform().isAndroid) {
@@ -82,11 +80,9 @@ class _App extends State<KolabDo> {
         }
         break;
       case 'doing':
-        {
-          setState(() {
-            repository.showDoing = !repository.showDoing;
-          });
-        }
+        setState(() {
+          repository.showDoing = !repository.showDoing;
+        });
         break;
       default:
         break;
