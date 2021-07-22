@@ -202,9 +202,12 @@ class _App extends State<KolabDo> {
                 showModalBottomSheet<void>(
                   context: context,
                   builder: (BuildContext context) {
-                    return TodoInput(
-                        calendar: repository.currentCalendar,
-                        repository: repository);
+                    return Padding(
+                        padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).viewInsets.bottom),
+                        child: TodoInput(
+                            calendar: repository.currentCalendar,
+                            repository: repository));
                   },
                 );
               },
