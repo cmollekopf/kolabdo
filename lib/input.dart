@@ -41,6 +41,9 @@ class _TodoInput extends State<TodoInput> {
   }
 
   void addTodo(text) async {
+    if (text.isEmpty) {
+      return;
+    }
     //If there is an existing completed todo with the same summary, we simply set it to not done
     Iterable<Todo> existing = _repository.rawTodos.where((Todo todo) {
       if (todo.summary == _textInputController.text) {
