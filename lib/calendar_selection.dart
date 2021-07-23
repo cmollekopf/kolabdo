@@ -97,7 +97,15 @@ class _CalendarSelection extends State<CalendarSelection> {
                   onSelectCalendars: () => setState(() {
                     _editEnabled = index;
                   }),
-                )
+                ),
+                if (_editEnabled == index)
+                    ElevatedButton(
+                        child: Text("Done"),
+                        onPressed: () => setState(() {
+                            _editEnabled = -1;
+                        })
+                    )
+
               ]);
             },
           );
@@ -169,7 +177,13 @@ class CalendarList extends StatelessWidget {
                   selected:
                       (calendar.path == repository.currentCalendar?.path) &&
                           selected,
-                  onTap: () => onCalendarSelected(calendar),
+                  onTap: () {
+                      if (editEnabled) {
+                        onCalendarEnabled(calendar, !isEnabled);
+                      } else {
+                        onCalendarSelected(calendar);
+                      }
+                  },
                 );
               },
             );
