@@ -11,18 +11,20 @@ import 'package:intl/intl.dart';
 import 'accounts.dart';
 
 class Calendar {
-  Calendar(this.path, this.name);
+  Calendar(this.path, this.name, this.ctag);
   String path;
   String name;
+  String ctag;
 
   factory Calendar.fromJSONEncodable(map) {
-    return Calendar(map['path'], map['name']);
+    return Calendar(map['path'], map['name'], map['ctag']);
   }
 
   toJSONEncodable() {
     return {
       'name': name,
       'path': path,
+      'ctag': ctag,
     };
   }
 }
@@ -321,9 +323,7 @@ class Repository {
         account.username, account.password);
 
     //We're not waiting for these to complete
-    fetchCalendars().then((calendars) {
-      _calendarProvider.update(calendars);
-    });
+    updateCalendars();
     updateTodos(currentCalendar);
   }
 
@@ -354,7 +354,7 @@ class Repository {
   }
 
   Future<void> refreshCalendars() async {
-    _calendarProvider.update(await fetchCalendars());
+    await updateCalendars();
   }
 
   _saveToStorage(List<Todo> todos) async {
@@ -537,9 +537,15 @@ class Repository {
     for (var entry in list) {
       print("Calendar ${entry.displayName}");
       if (entry.displayName != "[]" && !entry.displayName.isEmpty) {
-        calendars.add(Calendar(entry.path, entry.displayName));
+        calendars.add(Calendar(entry.path, entry.displayName, entry.ctag));
       }
     }
+
+    return calendars;
+  }
+
+  Future<void> updateCalendars() async {
+    var calendars = await fetchCalendars();
 
     if (currentCalendar == null && !calendars.isEmpty) {
       for (var calendar in calendars) {
@@ -549,9 +555,28 @@ class Repository {
       }
     }
 
-    _saveCalendarsToStorage(calendars);
+    await _saveCalendarsToStorage(calendars);
+    _calendarProvider.update(calendars);
+  }
 
-    return calendars;
+  Calendar getCalendar(String path) {
+    for (Calendar cal in _calendarProvider.value) {
+      if (cal.path == path) {
+        return cal;
+      }
+    }
+    return null;
+  }
+
+  Future<void> checkForUpdates() async {
+    var calendars = await fetchCalendars();
+
+    for (var calendar in calendars) {
+      var localCalendar = getCalendar(calendar.path);
+      if (localCalendar != null && calendar.ctag != localCalendar.ctag) {
+        await updateTodos(localCalendar);
+      }
+    }
   }
 
   Future<void> removeCompleted() async {
