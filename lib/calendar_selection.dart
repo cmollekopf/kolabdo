@@ -99,13 +99,11 @@ class _CalendarSelection extends State<CalendarSelection> {
                   }),
                 ),
                 if (_editEnabled == index)
-                    ElevatedButton(
-                        child: Text("Done"),
-                        onPressed: () => setState(() {
+                  ElevatedButton(
+                      child: Text("Done"),
+                      onPressed: () => setState(() {
                             _editEnabled = -1;
-                        })
-                    )
-
+                          }))
               ]);
             },
           );
@@ -178,11 +176,11 @@ class CalendarList extends StatelessWidget {
                       (calendar.path == repository.currentCalendar?.path) &&
                           selected,
                   onTap: () {
-                      if (editEnabled) {
-                        onCalendarEnabled(calendar, !isEnabled);
-                      } else {
-                        onCalendarSelected(calendar);
-                      }
+                    if (editEnabled) {
+                      onCalendarEnabled(calendar, !isEnabled);
+                    } else {
+                      onCalendarSelected(calendar);
+                    }
                   },
                 );
               },
