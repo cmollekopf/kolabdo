@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:core';
 import 'dart:collection';
 
@@ -559,24 +558,27 @@ class Repository {
     _calendarProvider.update(calendars);
   }
 
-  Calendar getCalendar(String path) {
-    for (Calendar cal in _calendarProvider.value) {
-      if (cal.path == path) {
-        return cal;
-      }
-    }
-    return null;
-  }
 
   Future<void> checkForUpdates() async {
+    final stopwatch = Stopwatch()..start();
     var calendars = await fetchCalendars();
 
     for (var calendar in calendars) {
-      var localCalendar = getCalendar(calendar.path);
-      if (localCalendar != null && calendar.ctag != localCalendar.ctag) {
-        await updateTodos(localCalendar);
+      var index = _calendarProvider.value
+          .indexWhere((Calendar cal) => cal.path == calendar.path);
+      if (index >= 0) {
+        Calendar localCalendar = _calendarProvider.value[index];
+        if (localCalendar != null && calendar.ctag != localCalendar.ctag) {
+          await updateTodos(localCalendar);
+          //Update the ctag
+          _calendarProvider.value[index] = calendar;
+          //We're not notifying because noone is listening for the ctag change?
+        }
       }
     }
+
+    print('Checked for updates in ${stopwatch.elapsed.inMilliseconds}');
+    await _saveCalendarsToStorage(_calendarProvider.value);
   }
 
   Future<void> removeCompleted() async {
