@@ -79,6 +79,13 @@ class Todo {
     }
   }
 
+  updateJson() {
+    json['VTODO'][0]['SUMMARY'] = this.summary;
+    json['VTODO'][0]['DESCRIPTION'] = this.description;
+    json['VTODO'][0]['SEQUENCE'] = this.sequence;
+    json['VTODO'][0]['DTSTAMP'] = formatDateTime(this.dateTime);
+  }
+
   static Todo fromICal(ical, href, etag) {
     var parsed = ICal.toJson(ical);
     return Todo.fromJson(parsed, href, etag);
@@ -262,6 +269,7 @@ class Repository {
     }
 
     todo.sequence += 1;
+    todo.updateJson();
 
     _todoProvider._value[index] = todo;
     _todoProvider.notify();

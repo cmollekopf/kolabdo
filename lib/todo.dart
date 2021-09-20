@@ -54,8 +54,7 @@ class _TodoView extends State<TodoView> {
 
     _repository = args.repository;
     String description = todo.description ?? "";
-    description =
-        description.isEmpty ? "No description." : unescape(description);
+    description = unescape(description);
 
     _summaryController.text = todo.summary;
     _descriptionController.text = description;
@@ -115,6 +114,7 @@ class _TodoView extends State<TodoView> {
             maxLines: null,
             decoration: InputDecoration(
               labelText: 'Description',
+              hintText: 'No description.',
             ),
             controller: _descriptionController,
           ),
