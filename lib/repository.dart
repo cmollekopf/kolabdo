@@ -216,31 +216,46 @@ class Repository {
 
   get rawTodos => _todoProvider.value;
 
-  Future<void> processQueue() {
+  Future<void> processQueue() async {
     if (_client == null) {
       return null;
     }
 
+    const numRetries = 3;
+    int retries = numRetries;
+
     while (!_replayQueue.isEmpty) {
       ReplayOperation operation = _replayQueue.last;
 
-      //TODO await result and verify it succeeded
-      switch (operation.type) {
-        case ReplayType.create:
-          print("Create ${operation.todo.path} ${operation.todo.toICal()}");
-          _client.addEntry(operation.todo.path, operation.todo.toICal());
-          break;
-        case ReplayType.modify:
-          print("Modify ${operation.todo.path} ${operation.todo.toICal()}");
-          _client.updateEntry(operation.todo.path, operation.todo.toICal());
-          break;
-        case ReplayType.delete:
-          print("Delete ${operation.todo.path}");
-          _client.removeEntry(operation.todo.path);
-          break;
+      try {
+        switch (operation.type) {
+          case ReplayType.create:
+            print("Create ${operation.todo.path} ${operation.todo.toICal()}");
+            await _client.addEntry(
+                operation.todo.path, operation.todo.toICal());
+            break;
+          case ReplayType.modify:
+            print("Modify ${operation.todo.path} ${operation.todo.toICal()}");
+            await _client.updateEntry(
+                operation.todo.path, operation.todo.toICal());
+            break;
+          case ReplayType.delete:
+            print("Delete ${operation.todo.path}");
+            await _client.removeEntry(operation.todo.path);
+            break;
+        }
+        _replayQueue.removeLast();
+        retries = numRetries;
+        print("Replay succeeded");
+      } catch (error) {
+        print("Error during replay: ${error}");
+        retries--;
+        if (retries <= 0) {
+          print("Giving up with replay operation after ${numRetries} retries.");
+          _replayQueue.removeLast();
+        }
       }
 
-      _replayQueue.removeLast();
       //TODO persist queue
     }
   }
@@ -249,7 +264,7 @@ class Repository {
     _replayQueue.addFirst(operation);
     //TODO persist queue
     //TODO only process if not already processing?
-    processQueue();
+    await processQueue();
   }
 
   Future<void> createTodo(todo) async {
