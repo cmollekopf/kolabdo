@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:localstorage/localstorage.dart';
 import 'package:uuid/uuid.dart';
 
@@ -75,9 +74,33 @@ class Account {
     storage.setItem(account.id, account);
   }
 
+  static Future<void> remove(Account account) async {
+    LocalStorage storage = LocalStorage("accounts.json");
+    await storage.ready;
+    storage.deleteItem(account.id);
+
+    var map = storage.getItem("accounts");
+    List<String> accounts = [];
+    if (map != null) {
+      accounts = (map['ids'] as List)?.map((id) => id as String).toList();
+    }
+    accounts.remove(account.id);
+    storage.setItem("accounts", {'ids': accounts});
+
+    var id = storage.getItem("currentAccount");
+    if (id == account.id) {
+      storage.setItem(
+          "currentAccount", accounts.isEmpty ? null : accounts.first);
+    }
+  }
+
   static Future<void> setCurrent(Account account) async {
     LocalStorage storage = LocalStorage("accounts.json");
     await storage.ready;
+    if (account == null) {
+      storage.setItem("currentAccount", null);
+      return;
+    }
     storage.setItem("currentAccount", account.id);
 
     var map = storage.getItem("accounts");

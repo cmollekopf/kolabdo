@@ -340,6 +340,10 @@ class Repository {
     await remote;
   }
 
+  Future<void> remove() async {
+    await storage.clear();
+  }
+
   set showDoing(show) {
     _showDoing = show;
     //Reload todos (we're just filtering locally)
@@ -557,7 +561,6 @@ class Repository {
     await _saveCalendarsToStorage(calendars);
     _calendarProvider.update(calendars);
   }
-
 
   Future<void> checkForUpdates() async {
     final stopwatch = Stopwatch()..start();

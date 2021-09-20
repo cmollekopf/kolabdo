@@ -89,14 +89,15 @@ class _App extends State<KolabDo> {
     }
   }
 
-  Future<void> showLoginDialog(
-      BuildContext context, replace, Account acc) async {
+  Future<void> showLoginDialog(BuildContext context, replace, Account acc,
+      {Function(Account) onRemove = null}) async {
     Account account;
     if (replace) {
       account = await Navigator.pushReplacement(
         context,
         MaterialPageRoute<Account>(
-          builder: (BuildContext context) => LoginDialog(account: acc),
+          builder: (BuildContext context) =>
+              LoginDialog(account: acc, onRemove: onRemove),
           fullscreenDialog: true,
         ),
       );
@@ -104,7 +105,8 @@ class _App extends State<KolabDo> {
       account = await Navigator.push(
         context,
         MaterialPageRoute<Account>(
-          builder: (BuildContext context) => LoginDialog(account: acc),
+          builder: (BuildContext context) =>
+              LoginDialog(account: acc, onRemove: onRemove),
           fullscreenDialog: true,
         ),
       );
@@ -235,7 +237,27 @@ class _App extends State<KolabDo> {
                     child: CalendarSelection(
                         repository: repository,
                         onEdit: (Account account) =>
-                            showLoginDialog(context, false, account),
+                            showLoginDialog(context, false, account,
+                                onRemove: (Account account) async {
+                              await Account.remove(account);
+                              await repository.remove();
+
+                              var accounts = await Account.listAccounts();
+                              if (accounts.isEmpty) {
+                                setState(() {
+                                  Account.setCurrent(null);
+                                  _repository = Future<Repository>.error(
+                                      "No account available");
+                                });
+                              } else {
+                                Account newAccount = accounts.first;
+                                setState(() {
+                                  Account.setCurrent(newAccount);
+                                  _repository = Future<Repository>.value(
+                                      Repository(newAccount));
+                                });
+                              }
+                            }),
                         onSelectionChanged:
                             (Account account, Calendar calendar) {
                           var repo = Repository(account);

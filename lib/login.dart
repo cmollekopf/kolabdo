@@ -3,7 +3,8 @@ import 'repository.dart';
 import 'accounts.dart';
 
 class LoginDialog extends StatefulWidget {
-  LoginDialog({Key key, this.account, this.onDone = null}) : super(key: key);
+  LoginDialog({Key key, this.account, this.onDone = null, this.onRemove = null})
+      : super(key: key);
 
   @override
   LoginDialogState createState() {
@@ -12,6 +13,7 @@ class LoginDialog extends StatefulWidget {
 
   final Account account;
   final Function(Account) onDone;
+  final Function(Account) onRemove;
 }
 
 class LoginDialogState extends State<LoginDialog> {
@@ -34,6 +36,27 @@ class LoginDialogState extends State<LoginDialog> {
     return Scaffold(
         appBar: AppBar(
           title: Text('Login'),
+          actions: <Widget>[
+            PopupMenuButton<String>(
+              onSelected: (String value) async {
+                switch (value) {
+                  case 'remove-account':
+                    widget.onRemove(this._account);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Account removed')));
+                    Navigator.pop(context, null);
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                if (widget.onRemove != null)
+                  const PopupMenuItem<String>(
+                    value: 'remove-account',
+                    child: Text('Remove Account'),
+                  )
+              ],
+            ),
+          ],
         ),
         body: SingleChildScrollView(
             child: Center(
