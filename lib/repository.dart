@@ -7,6 +7,7 @@ import 'package:ical_parser/ical_parser.dart';
 import 'package:caldav/caldav.dart';
 import 'package:localstorage/localstorage.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'accounts.dart';
 
 class Calendar {
@@ -194,6 +195,7 @@ class Repository {
   bool _showDoing = false;
 
   Future<void> ready;
+  Future<void> initialized;
 
   LocalStorage storage;
 
@@ -201,7 +203,10 @@ class Repository {
 
   final Account account;
 
-  Repository(this.account) {
+  http.BaseClient httpClient;
+
+  Repository(this.account, {http.BaseClient httpClient}) {
+    this.httpClient = httpClient;
     ready = init();
   }
 
@@ -214,6 +219,7 @@ class Repository {
   Provider<List<Calendar>> _calendarProvider;
   Provider<bool> _operationInProgressProvider;
 
+  get rawCalendars => _calendarProvider.value;
   get rawTodos => _todoProvider.value;
 
   Future<void> processQueue() async {
@@ -309,11 +315,12 @@ class Repository {
     await _saveToStorage(_todoProvider._value);
   }
 
-  static Future<bool> test(
-      String server, String username, String password) async {
+  static Future<bool> test(String server, String username, String password,
+      {http.BaseClient httpClient}) async {
     print("Testing $server, $username");
-    var newClient =
-        CalDavClient(Uri.parse("https://${server}"), username, password);
+    var newClient = CalDavClient(
+        Uri.parse("https://${server}"), username, password,
+        httpClient: httpClient);
     return await newClient.checkConnection();
   }
 
@@ -342,11 +349,13 @@ class Repository {
 
     print("Logging in as ${account.username}");
     _client = CalDavClient(Uri.parse("https://${account.server}"),
-        account.username, account.password);
+        account.username, account.password,
+        httpClient: this.httpClient);
 
     //We're not waiting for these to complete
-    updateCalendars();
-    updateTodos(currentCalendar);
+    var calendarsResult = updateCalendars();
+    var todosResult = updateTodos(currentCalendar);
+    this.initialized = Future.wait([calendarsResult, todosResult]);
   }
 
   Future<void> setCalendar(Calendar calendar) async {
@@ -469,6 +478,7 @@ class Repository {
     //This can apparently happen when first logging in.
     await ready;
     if (calendar == null) {
+      _todoProvider.update([]);
       return;
     }
     final stopwatch = Stopwatch()..start();
