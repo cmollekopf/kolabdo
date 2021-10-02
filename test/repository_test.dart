@@ -6,24 +6,20 @@ import 'package:http/testing.dart';
 import '../lib/accounts.dart';
 import '../lib/repository.dart';
 
-String todoResponse = '''<?xml version="1.0"?>
-<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/">
+String userPrincipalResponse = '''<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:card="urn:ietf:params:xml:ns:carddav">
     <d:response>
-        <d:href>/remote.php/caldav/</d:href>
+        <d:href>/</d:href>
         <d:propstat>
             <d:prop>
                 <d:current-user-principal>
-                    <d:href>/remote.php/caldav/principals/saitho/</d:href>
+                    <d:href>/principals/test1@kolab.org/</d:href>
                 </d:current-user-principal>
             </d:prop>
             <d:status>HTTP/1.1 200 OK</d:status>
         </d:propstat>
     </d:response>
 </d:multistatus>''';
-
-// I/flutter ( 5335): 207
-// I/flutter ( 5335): <?xml version="1.0" encoding="utf-8"?>
-// I/flutter ( 5335): <d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:card="urn:ietf:params:xml:ns:carddav"><d:response><d:href>/</d:href><d:propstat><d:prop><d:current-user-principal><d:href>/principals/test1@kolab.org/</d:href></d:current-user-principal></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>
 
 String calendarResponse = '''<?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/">
@@ -38,21 +34,6 @@ String calendarResponse = '''<?xml version="1.0" encoding="utf-8"?>
         </d:propstat>
     </d:response>
 </d:multistatus>''';
-
-// String todoResponse = '''<?xml version="1.0"?>
-// <d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/">
-//     <d:response>
-//         <d:href>/remote.php/caldav/</d:href>
-//         <d:propstat>
-//             <d:prop>
-//                 <d:current-user-principal>
-//                     <d:href>/remote.php/caldav/principals/saitho/</d:href>
-//                 </d:current-user-principal>
-//             </d:prop>
-//             <d:status>HTTP/1.1 200 OK</d:status>
-//         </d:propstat>
-//     </d:response>
-// </d:multistatus>''';
 
 MockClient responsesMock(var responses) {
   return MockClient((http.Request request) {
@@ -69,8 +50,7 @@ void main() {
   test('test repo initialization', () async {
     var httpMock = responsesMock([
       http.Response(calendarResponse,
-          207), //TODO This should probably be a response to a query for the user home
-      http.Response(calendarResponse, 207)
+          207)
     ]);
 
     var account = Account.create(
@@ -89,7 +69,6 @@ void main() {
   test('test todo replay', () async {
     //TODO callback for responses
     var httpMock = responsesMock([
-      http.Response(calendarResponse, 207), //Query for user home?
       http.Response(calendarResponse, 207)
     ]);
 
