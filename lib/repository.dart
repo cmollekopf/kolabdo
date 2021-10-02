@@ -73,7 +73,12 @@ class Todo {
       this.summary = t['SUMMARY'];
       this.description = t['DESCRIPTION'];
       this.dateTime = DateTime.parse(t['DTSTAMP']);
-      this.sequence = int.parse(t['SEQUENCE']);
+      //From storage we get an int, but from the network we may get a string
+      if (t['SEQUENCE'] is String) {
+        this.sequence = int.parse(t['SEQUENCE']);
+      } else {
+        this.sequence = t['SEQUENCE'];
+      }
       this.done = t['STATUS'] == 'COMPLETED';
       this.doing = t['STATUS'] == 'IN-PROCESS';
       this.json = json;

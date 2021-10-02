@@ -102,4 +102,66 @@ void main() {
     // repo.createTodo(todo);
     //TODO test that we send what we expect to the server
   });
+
+  test('test todo serialization', () async {
+    var jsonEncodable = {
+      "json": {
+        "VERSION": "2.0",
+        "PRODID":
+            "-//Kolab//iRony DAV Server 0.4.3//Sabre//Sabre VObject 3.5.3//EN",
+        "CALSCALE": "GREGORIAN",
+        "VTODO": [
+          {
+            "UID": "95166594-ea23-4c29-bb79-a75281f3221d",
+            "DTSTAMP": "20210920T225403Z",
+            "CREATED": "20210402T171039Z",
+            "LAST-MODIFIED": "20210920T225403Z",
+            "SUMMARY": "ggfdss",
+            "DESCRIPTION": "sdfsdf2345",
+            "SEQUENCE": 8,
+            "STATUS": "NEEDS-ACTION",
+            "CLASS": "PUBLIC"
+          }
+        ]
+      },
+      "path":
+          "/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/95166594-ea23-4c29-bb79-a75281f3221d.ics",
+      "etag": "\"24e11d7f50cdb63d-200-0\""
+    };
+
+    var todo = Todo.fromJSONEncodable(jsonEncodable);
+
+    expect(todo.sequence, 8);
+  });
+
+  test('test string sequence', () async {
+    var jsonEncodable = {
+      "json": {
+        "VERSION": "2.0",
+        "PRODID":
+            "-//Kolab//iRony DAV Server 0.4.3//Sabre//Sabre VObject 3.5.3//EN",
+        "CALSCALE": "GREGORIAN",
+        "VTODO": [
+          {
+            "UID": "95166594-ea23-4c29-bb79-a75281f3221d",
+            "DTSTAMP": "20210920T225403Z",
+            "CREATED": "20210402T171039Z",
+            "LAST-MODIFIED": "20210920T225403Z",
+            "SUMMARY": "ggfdss",
+            "DESCRIPTION": "sdfsdf2345",
+            "SEQUENCE": "8",
+            "STATUS": "NEEDS-ACTION",
+            "CLASS": "PUBLIC"
+          }
+        ]
+      },
+      "path":
+          "/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/95166594-ea23-4c29-bb79-a75281f3221d.ics",
+      "etag": "\"24e11d7f50cdb63d-200-0\""
+    };
+
+    var todo = Todo.fromJSONEncodable(jsonEncodable);
+
+    expect(todo.sequence, 8);
+  });
 }
