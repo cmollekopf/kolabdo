@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:platform/platform.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 import 'list_view.dart';
 import 'repository.dart';
@@ -46,6 +49,23 @@ class _App extends State<KolabDo> {
   Future<Repository> _repository;
   bool _showGrid = true;
   GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
+  StreamSubscription _intentDataStreamSubscription;
+
+  void _receivedText(String text) async {
+    var repository = await _repository;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: TodoInput(
+                calendar: repository.currentCalendar,
+                repository: repository,
+                input: text));
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -55,10 +75,20 @@ class _App extends State<KolabDo> {
       await repository.ready;
       return repository;
     });
+
+    // For sharing or opening urls/text coming from outside the app while the app is in the memory
+    _intentDataStreamSubscription = ReceiveSharingIntent.getTextStream()
+        .listen(_receivedText, onError: (err) {
+      print("getLinkStream error: $err");
+    });
+
+    // For sharing or opening urls/text coming from outside the app while the app is closed
+    ReceiveSharingIntent.getInitialText().then(_receivedText);
   }
 
   @override
   void dispose() {
+    _intentDataStreamSubscription.cancel();
     super.dispose();
   }
 

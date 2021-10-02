@@ -43,6 +43,7 @@ dependencies:
   intl: ^0.17.0
   random_color: ^1.0.5
   android_intent_plus: ^1.0.2
+  receive_sharing_intent: ^1.4.5
 
 dev_dependencies:
   flutter_launcher_icons: ">=0.8.0"

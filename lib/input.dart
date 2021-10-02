@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'repository.dart';
 
 class TodoInput extends StatefulWidget {
-  TodoInput({Key key, this.calendar, this.repository}) : super(key: key);
+  TodoInput({Key key, this.calendar, this.repository, this.input = null})
+      : super(key: key);
 
   final Calendar calendar;
   final Repository repository;
+  final String input;
 
   @override
   State<StatefulWidget> createState() => _TodoInput();
@@ -66,6 +68,9 @@ class _TodoInput extends State<TodoInput> {
   void initState() {
     super.initState();
     _textInputController.addListener(updateSuggestions);
+    if (this.widget.input != null) {
+      _textInputController.text = this.widget.input;
+    }
   }
 
   @override
