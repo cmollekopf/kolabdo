@@ -30,6 +30,7 @@ dependencies:
   cupertino_icons: ^1.0.2
 
   caldav:
+    # path: "/home/mollekopf/src/caldav"
     git:
       url: https://github.com/cmollekopf/caldav.git
       ref: master
