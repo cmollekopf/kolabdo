@@ -591,7 +591,7 @@ class Repository {
     if (currentCalendar == null && !calendars.isEmpty) {
       for (var calendar in calendars) {
         if (isEnabled(calendar)) {
-          setCalendar(calendar);
+          await setCalendar(calendar);
         }
       }
     }
