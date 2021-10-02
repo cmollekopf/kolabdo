@@ -35,7 +35,6 @@ String calendarResponse = '''<?xml version="1.0" encoding="utf-8"?>
     </d:response>
 </d:multistatus>''';
 
-
 String todoResponse = '''<?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:card="urn:ietf:params:xml:ns:carddav"><d:response><d:href>/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/%7b37af7f9d-65b5-434f-9b28-3e165eda7cee%7d.ics</d:href><d:propstat><d:prop><cal:calendar-data>BEGIN:VCALENDAR
 VERSION:2.0
@@ -74,7 +73,6 @@ END:VTODO
 END:VCALENDAR
 </cal:calendar-data><d:getetag>"24e11d7f50cdb63d-201-0"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>''';
 
-
 MockClient responsesMock(var responses) {
   return MockClient((http.Request request) {
     print(request);
@@ -88,10 +86,7 @@ MockClient responsesMock(var responses) {
 
 void main() {
   test('test repo initialization', () async {
-    var httpMock = responsesMock([
-      http.Response(calendarResponse,
-          207)
-    ]);
+    var httpMock = responsesMock([http.Response(calendarResponse, 207)]);
 
     var account = Account.create(
         server: "server", username: "username", password: "password");
@@ -106,12 +101,9 @@ void main() {
 
   test('test todo initialization', () async {
     var httpMock = responsesMock([
-      http.Response(calendarResponse,
-          207),
-      http.Response(todoResponse,
-          207),
-      http.Response(todoResponse,
-          207)
+      http.Response(calendarResponse, 207),
+      http.Response(todoResponse, 207),
+      http.Response(todoResponse, 207)
     ]);
 
     var account = Account.create(
@@ -134,9 +126,7 @@ void main() {
 
   test('test todo replay', () async {
     //TODO callback for responses
-    var httpMock = responsesMock([
-      http.Response(calendarResponse, 207)
-    ]);
+    var httpMock = responsesMock([http.Response(calendarResponse, 207)]);
 
     var account = Account.create(
         server: "server", username: "username", password: "password");
