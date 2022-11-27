@@ -74,7 +74,7 @@ class _TodoView extends State<TodoView> {
           },
         ),
         IconButton(
-          icon: Icon(todo.doing ? Icons.bookmark_border : Icons.bookmark),
+          icon: Icon(todo.doing ? Icons.bookmark : Icons.bookmark_border),
           tooltip: "Set task as doing",
           onPressed: () {
             var modified = todo;

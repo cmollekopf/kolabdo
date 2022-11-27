@@ -153,6 +153,14 @@ class _App extends State<KolabDo> {
     }
   }
 
+  String getTitle(Repository repository, String defaultTitle) {
+    String s = repository.currentCalendar?.name ?? defaultTitle;
+    if(repository.showDoing) {
+        return s + " (Doing)";
+    }
+    return s;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Repository>(
@@ -179,7 +187,7 @@ class _App extends State<KolabDo> {
           return Scaffold(
             key: _scaffoldKey,
             appBar: AppBar(
-              title: Text(repository.currentCalendar?.name ?? widget.title),
+              title: Text(getTitle(repository, widget.title)),
               actions: <Widget>[
                 IconButton(
                   icon: Icon(_showGrid ? Icons.list : Icons.grid_view),
@@ -192,8 +200,8 @@ class _App extends State<KolabDo> {
                 ),
                 IconButton(
                   icon: Icon(repository.showDoing
-                      ? Icons.bookmark_border
-                      : Icons.bookmark),
+                      ? Icons.bookmark
+                      : Icons.bookmark_border),
                   tooltip: "Show tasks marked as doing",
                   onPressed: () {
                     setState(() {
