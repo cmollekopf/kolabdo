@@ -105,7 +105,7 @@ class _TodoView extends State<TodoView> {
             onSubmitted: (String value) async {
               _focusNode.requestFocus();
             },
-            style: Theme.of(context).textTheme.title,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
           SizedBox(height: 16),
           TextField(
