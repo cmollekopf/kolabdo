@@ -485,7 +485,8 @@ class Repository {
   }
 
   Todo _findLocalTodo(String id) {
-    return _todoProvider._value.firstWhere((t) => t.id == id, orElse: () => null);
+    return _todoProvider._value
+        .firstWhere((t) => t.id == id, orElse: () => null);
   }
 
   int _findLocalTodoIndex(String id) {
@@ -509,7 +510,8 @@ class Repository {
         var local = _findLocalTodo(todo.id);
         if (local != null) {
           if (local.sequence > todo.sequence) {
-            print("Keeping local item instead ${local.sequence}:${todo.sequence} ${local.etag}:${todo.etag} ${todo.summary}");
+            print(
+                "Keeping local item instead ${local.sequence}:${todo.sequence} ${local.etag}:${todo.etag} ${todo.summary}");
             //If we do, we keep that instead.
             return local;
           }
@@ -567,16 +569,11 @@ class Repository {
 
     _setInProgress(false);
 
-    List<Todo> todos = [];
-    for (var entry in entries) {
-      if (entry.data == null) {
-        todos.add(Todo.fromEtag(entry.path, entry.etag));
-      } else {
-        todos.add(Todo.fromICal(entry.data, entry.path, entry.etag));
-      }
-    }
-
-    return todos;
+    return entries
+        .map<Todo>((e) => (e.data == null)
+            ? Todo.fromEtag(e.path, e.etag)
+            : Todo.fromICal(e.data, e.path, e.etag))
+        .toList();
   }
 
   Future<List<Calendar>> fetchCalendars() async {
