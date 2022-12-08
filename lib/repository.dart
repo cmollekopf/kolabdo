@@ -288,9 +288,9 @@ class Repository {
   }
 
   Future<void> updateTodo(todo) async {
-    int index = _todoProvider._value.indexOf(todo);
+    int index = _findLocalTodoIndex(todo.id);
     if (index < 0) {
-      print("Failed to find entry");
+      print("Failed to find entry for: ${todo.summary}");
       return;
     }
 
@@ -306,9 +306,9 @@ class Repository {
   }
 
   Future<void> removeTodo(todo) async {
-    int index = _todoProvider._value.indexOf(todo);
+    int index = _findLocalTodoIndex(todo.id);
     if (index < 0) {
-      print("Failed to find entry");
+      print("Failed to find entry: ${todo.summary}");
       return;
     }
 
@@ -479,6 +479,14 @@ class Repository {
     _operationInProgressProvider.update(state);
   }
 
+  Todo _findLocalTodo(String id) {
+    return _todoProvider._value.firstWhere((t) => t.id == id, orElse: () => null);
+  }
+
+  int _findLocalTodoIndex(String id) {
+    return _todoProvider._value.indexWhere((t) => t.id == id);
+  }
+
   Future<void> updateTodos(Calendar calendar) async {
     //This can apparently happen when first logging in.
     await ready;
@@ -493,13 +501,12 @@ class Repository {
       print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
       var newList = todos.map((Todo todo) {
         //Check if we have a newer entry locally already.
-        for (var t in _todoProvider.value) {
-          if (todo.id == t.id) {
-            if (t.sequence > todo.sequence) {
-              //If we do, we keep that instead.
-              return t;
-            }
-            break;
+        var local = _findLocalTodo(todo.id);
+        if (local != null) {
+          if (local.sequence > todo.sequence) {
+            print("Keeping local item instead ${local.sequence}:${todo.sequence} ${local.etag}:${todo.etag} ${todo.summary}");
+            //If we do, we keep that instead.
+            return local;
           }
         }
         return todo;
