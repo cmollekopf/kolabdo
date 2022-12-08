@@ -85,6 +85,10 @@ class Todo {
     }
   }
 
+  updateTimestamp() {
+    dateTime = DateTime.now().toUtc();
+  }
+
   updateJson() {
     json['VTODO'][0]['SUMMARY'] = this.summary;
     json['VTODO'][0]['DESCRIPTION'] = this.description;
@@ -295,6 +299,7 @@ class Repository {
     }
 
     todo.sequence += 1;
+    todo.updateTimestamp();
     todo.updateJson();
 
     _todoProvider._value[index] = todo;
