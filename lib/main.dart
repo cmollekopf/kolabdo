@@ -155,8 +155,8 @@ class _App extends State<KolabDo> {
 
   String getTitle(Repository repository, String defaultTitle) {
     String s = repository.currentCalendar?.name ?? defaultTitle;
-    if(repository.showDoing) {
-        return s + " (Doing)";
+    if (repository.showDoing) {
+      return s + " (Doing)";
     }
     return s;
   }
