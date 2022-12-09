@@ -104,6 +104,30 @@ MockClient requestResponsesMock(
   });
 }
 
+typedef FutureCallback = Future<void> Function();
+
+class Interaction {
+  Interaction(this.request, this.response, [this.callback = null]);
+  http.Request request;
+  http.Response response;
+  Future<void> Function(http.Request) callback;
+}
+
+MockClient interactionsMock(List<Interaction> interactions) {
+  return MockClient((http.Request request) async {
+    print(request);
+    print(request.body);
+    print(request.method);
+    var interaction = interactions.removeAt(0);
+    expect(interaction.request.method, request.method);
+    expect(interaction.request.url, request.url);
+    if (interaction.callback != null) {
+      await interaction.callback(request);
+    }
+    return Future.value(interaction.response);
+  });
+}
+
 void main() {
   test('test repo initialization', () async {
     var httpMock = responsesMock([http.Response(calendarResponse, 207)]);
@@ -168,18 +192,25 @@ void main() {
         Todo.newTodo("summary", "path", isDoing: false, id: "somerandomid"));
   });
 
-  //TODO test what happens when we update a todo while a sync is in progress.
   test('test todo modification', () async {
-    var httpMock = requestResponsesMock({
-      http.Request('PROPFIND', Uri.parse("https://server/calendars/username")):
-          http.Response(calendarResponse, 207),
-      http.Request(
-              'REPORT', Uri.parse("https://server/calendars/johndoe/home")):
-          http.Response(todoResponse, 207),
-      http.Request('PUT', Uri.parse("https://server/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/%7B37af7f9d-65b5-434f-9b28-3e165eda7cee%7D.ics")):
-            
-          http.Response("", 201),
-    });
+    var httpMock = interactionsMock([
+      Interaction(
+          http.Request(
+              'PROPFIND', Uri.parse("https://server/calendars/username")),
+          http.Response(calendarResponse, 207)),
+      Interaction(
+          http.Request(
+              'REPORT', Uri.parse("https://server/calendars/johndoe/home")),
+          http.Response(todoResponse, 207)),
+      Interaction(
+          http.Request(
+              'PUT',
+              Uri.parse(
+                  "https://server/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/%7B37af7f9d-65b5-434f-9b28-3e165eda7cee%7D.ics")),
+          http.Response("", 201), (http.Request request) async {
+        expect(request.body, contains('SUMMARY:modifiedSummary'));
+      }),
+    ]);
 
     var account = Account.create(
         server: "server", username: "username", password: "password");
@@ -195,6 +226,55 @@ void main() {
     var modified = repo.rawTodos[0];
     modified.summary = "modifiedSummary";
     await repo.updateTodo(modified);
+
+    var todo = repo.rawTodos[0];
+    expect(todo.summary, "modifiedSummary");
+  });
+
+  test('test todo modification during sync', () async {
+    var repo;
+    var httpMock = interactionsMock([
+      Interaction(
+          http.Request(
+              'PROPFIND', Uri.parse("https://server/calendars/username")),
+          http.Response(calendarResponse, 207)),
+      Interaction(
+          http.Request(
+              'REPORT', Uri.parse("https://server/calendars/johndoe/home")),
+          http.Response(todoResponse, 207)),
+      Interaction(
+          http.Request(
+              'REPORT', Uri.parse("https://server/calendars/johndoe/home")),
+          http.Response(todoResponse, 207), (http.Request request) async {
+        //Modify during the sync
+        var modified = repo.rawTodos[0];
+        modified.summary = "modifiedSummary";
+        await repo.updateTodo(modified);
+      }),
+      Interaction(
+          http.Request(
+              'PUT',
+              Uri.parse(
+                  "https://server/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/%7B37af7f9d-65b5-434f-9b28-3e165eda7cee%7D.ics")),
+          http.Response("", 201), (http.Request request) async {
+        expect(request.body, contains('SUMMARY:modifiedSummary'));
+      }),
+    ]);
+
+    var account = Account.create(
+        server: "server", username: "username", password: "password");
+    repo = Repository(account, httpClient: httpMock);
+
+    await repo.ready;
+    await repo.initialized;
+    expect(repo.rawCalendars, isNotNull);
+    expect(repo.rawCalendars.length, 1);
+    await repo.setCalendar(repo.rawCalendars[0]);
+    expect(repo.currentCalendar, isNotNull);
+    expect(repo.rawTodos.length, 2);
+
+    // This will also trigger the nested modification
+    await repo.updateTodos(repo.currentCalendar);
 
     var todo = repo.rawTodos[0];
     expect(todo.summary, "modifiedSummary");

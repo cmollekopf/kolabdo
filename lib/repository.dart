@@ -267,7 +267,7 @@ class Repository {
         _replayQueue.removeLast();
         retries = numRetries;
         print("Replay succeeded");
-      } catch (error) {
+      } on Exception catch (error) {
         print("Error during replay: ${error}");
         retries--;
         if (retries <= 0) {
