@@ -152,7 +152,7 @@ void main() {
               'REPORT', Uri.parse("https://server/calendars/johndoe/home")):
           http.Response(emptyTodoResponse, 207),
       http.Request('PUT', Uri.parse("https://server/pathsomerandomid.ics")):
-          http.Response(emptyTodoResponse, 201),
+          http.Response("", 201),
     });
 
     var account = Account.create(
@@ -169,6 +169,36 @@ void main() {
   });
 
   //TODO test what happens when we update a todo while a sync is in progress.
+  test('test todo modification', () async {
+    var httpMock = requestResponsesMock({
+      http.Request('PROPFIND', Uri.parse("https://server/calendars/username")):
+          http.Response(calendarResponse, 207),
+      http.Request(
+              'REPORT', Uri.parse("https://server/calendars/johndoe/home")):
+          http.Response(todoResponse, 207),
+      http.Request('PUT', Uri.parse("https://server/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/%7B37af7f9d-65b5-434f-9b28-3e165eda7cee%7D.ics")):
+            
+          http.Response("", 201),
+    });
+
+    var account = Account.create(
+        server: "server", username: "username", password: "password");
+    var repo = Repository(account, httpClient: httpMock);
+    await repo.ready;
+    await repo.initialized;
+    expect(repo.rawCalendars, isNotNull);
+    expect(repo.rawCalendars.length, 1);
+    await repo.setCalendar(repo.rawCalendars[0]);
+    expect(repo.currentCalendar, isNotNull);
+    expect(repo.rawTodos.length, 2);
+
+    var modified = repo.rawTodos[0];
+    modified.summary = "modifiedSummary";
+    await repo.updateTodo(modified);
+
+    var todo = repo.rawTodos[0];
+    expect(todo.summary, "modifiedSummary");
+  });
 
   test('test todo serialization', () async {
     var jsonEncodable = {
