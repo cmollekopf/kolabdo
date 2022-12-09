@@ -73,14 +73,34 @@ END:VTODO
 END:VCALENDAR
 </cal:calendar-data><d:getetag>"24e11d7f50cdb63d-201-0"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>''';
 
-MockClient responsesMock(var responses) {
+String emptyTodoResponse = '''<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:card="urn:ietf:params:xml:ns:carddav"><d:response><d:href>/calendars/test1@kolab.org/f700fa68-3eb8-4b4f-9816-4741b712d398/%7b37af7f9d-65b5-434f-9b28-3e165eda7cee%7d.ics</d:href><d:propstat><d:prop><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Kolab//iRony DAV Server 0.4.3//Sabre//Sabre VObject 3.5.3//EN
+CALSCALE:GREGORIAN
+END:VCALENDAR
+</cal:calendar-data><d:getetag>"24e11d7f50cdb63d-201-0"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>''';
+
+MockClient responsesMock(List<http.Response> responses) {
   return MockClient((http.Request request) {
     print(request);
     print(request.body);
     print(request.method);
-    var response = responses.first;
-    responses.remove(response);
-    return Future.value(response);
+    return Future.value(responses.removeAt(0));
+  });
+}
+
+MockClient requestResponsesMock(
+    Map<http.Request, http.Response> requestResponsesMap) {
+  return MockClient((http.Request request) {
+    print(request);
+    print(request.body);
+    print(request.method);
+    var entry = requestResponsesMap.entries.first;
+    requestResponsesMap.remove(entry.key);
+    expect(entry.key.method, request.method);
+    expect(entry.key.url, request.url);
+    return Future.value(entry.value);
   });
 }
 
@@ -125,18 +145,30 @@ void main() {
   //TODO test  await repo.updateTodos(Calendar("path", "name", "ctag")); => should create a new todo with a response containing one
 
   test('test todo replay', () async {
-    //TODO callback for responses
-    var httpMock = responsesMock([http.Response(calendarResponse, 207)]);
+    var httpMock = requestResponsesMock({
+      http.Request('PROPFIND', Uri.parse("https://server/calendars/username")):
+          http.Response(calendarResponse, 207),
+      http.Request(
+              'REPORT', Uri.parse("https://server/calendars/johndoe/home")):
+          http.Response(emptyTodoResponse, 207),
+      http.Request('PUT', Uri.parse("https://server/pathsomerandomid.ics")):
+          http.Response(emptyTodoResponse, 201),
+    });
 
     var account = Account.create(
         server: "server", username: "username", password: "password");
     var repo = Repository(account, httpClient: httpMock);
+    await repo.ready;
     await repo.initialized;
+    expect(repo.rawCalendars, isNotNull);
+    expect(repo.rawCalendars.length, 1);
+    await repo.setCalendar(repo.rawCalendars[0]);
 
-    // var todo = Todo.newTodo("summary", "path", isDoing: false);
-    // repo.createTodo(todo);
-    //TODO test that we send what we expect to the server
+    repo.createTodo(
+        Todo.newTodo("summary", "path", isDoing: false, id: "somerandomid"));
   });
+
+  //TODO test what happens when we update a todo while a sync is in progress.
 
   test('test todo serialization', () async {
     var jsonEncodable = {

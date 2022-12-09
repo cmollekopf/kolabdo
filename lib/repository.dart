@@ -36,9 +36,14 @@ String formatDateTime(DateTime dt) {
 class Todo {
   Todo(this.path, this.id, this.summary, this.dateTime, this.done, this.json);
 
-  Todo.newTodo(String summary, String path, {bool isDoing = false}) {
+  Todo.newTodo(String summary, String path,
+      {bool isDoing = false, String id = null}) {
     this.summary = summary;
-    this.id = Uuid().v4();
+    if (id == null) {
+      this.id = Uuid().v4();
+    } else {
+      this.id = id;
+    }
     this.dateTime = DateTime.now().toUtc();
     this.done = false;
     this.path = path + this.id + ".ics";
