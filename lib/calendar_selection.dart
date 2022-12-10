@@ -137,11 +137,13 @@ class CalendarList extends StatelessWidget {
           stream: repository.calendars(showEnabled: !editEnabled),
           builder:
               (BuildContext context, AsyncSnapshot<List<Calendar>> snapshot) {
-            if (snapshot.hasError) {
-              return const Text("Error!");
-            } else if (!snapshot.hasData) {
+
+            if (!snapshot.hasData) {
               return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return const Text("Error!");
             }
+
             List<Calendar> calendars = snapshot.data;
 
             if (calendars.isEmpty) {
