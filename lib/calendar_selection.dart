@@ -24,7 +24,6 @@ class _CalendarSelection extends State<CalendarSelection> {
   Future<Account> _currentAccount;
   String _currentAccountId;
   Repository repository;
-  int _editEnabled = -1;
 
   @override
   void initState() {
@@ -34,7 +33,7 @@ class _CalendarSelection extends State<CalendarSelection> {
     _accounts = Account.listAccounts();
     _currentAccount = Account.loadCurrent();
     //TODO not sure if this is the correct way to go about it?
-    _currentAccount.then((Account current) => _currentAccountId = current.id);
+    _currentAccount.then((Account current) => {_currentAccountId = current.id});
   }
 
   @override
@@ -54,90 +53,71 @@ class _CalendarSelection extends State<CalendarSelection> {
               Account account = accounts[index];
               Repository repository = Repository(account);
 
-              return Column(children: [
-                ListTile(
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(_editEnabled == index
-                            ? Icons.favorite
-                            : Icons.favorite_outline),
-                        tooltip: "Edit",
-                        onPressed: () {
-                          setState(() {
-                            if (_editEnabled != index) {
-                              _editEnabled = index;
-                            } else {
-                              _editEnabled = -1;
-                            }
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.settings),
-                        tooltip: "Edit",
-                        onPressed: () => widget.onEdit(repository.account),
-                      ),
-                    ],
-                  ),
-                  title: Text(account.username,
-                      style: Theme.of(context).textTheme.subtitle1),
-                ),
-                CalendarList(
-                  repository: repository,
-                  selected: repository.account.id == _currentAccountId,
-                  editEnabled: _editEnabled == index,
-                  onCalendarSelected: (Calendar calendar) =>
-                      widget.onSelectionChanged(repository.account, calendar),
-                  onCalendarEnabled: (Calendar calendar, bool enabled) =>
-                      setState(() {
-                    repository.setEnabled(calendar, enabled);
-                  }),
-                  onSelectCalendars: () => setState(() {
-                    _editEnabled = index;
-                  }),
-                ),
-                if (_editEnabled == index)
-                  ElevatedButton(
-                      child: Text("Done"),
-                      onPressed: () => setState(() {
-                            _editEnabled = -1;
-                          }))
-              ]);
+              return CalendarList(
+                repository: repository,
+                selected: repository.account.id == _currentAccountId,
+                onCalendarSelected: (Calendar calendar) =>
+                    widget.onSelectionChanged(repository.account, calendar),
+                onEdit: widget.onEdit,
+                title: account.username,
+              );
             },
           );
         });
   }
 }
 
-class CalendarList extends StatelessWidget {
-  CalendarList({
-    Key key,
-    this.repository,
-    this.onCalendarSelected,
-    this.onCalendarEnabled,
-    this.onSelectCalendars,
-    this.selected,
-    this.editEnabled,
-  }) : super(key: key);
+class CalendarList extends StatefulWidget {
+  CalendarList(
+      {Key key,
+      this.repository,
+      this.onCalendarSelected,
+      this.onEdit,
+      this.selected,
+      this.title})
+      : super(key: key);
 
   final Repository repository;
   final Function(Calendar) onCalendarSelected;
-  final Function(Calendar, bool) onCalendarEnabled;
-  final Function() onSelectCalendars;
+  final Function(Account) onEdit;
   final bool selected;
-  final bool editEnabled;
+  final String title;
 
   @override
-  Widget build(BuildContext context) {
+  State<StatefulWidget> createState() => _CalendarList();
+}
+
+class _CalendarList extends State<CalendarList> {
+  Repository repository;
+  bool editEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    repository = widget.repository;
+    editEnabled = false;
+  }
+
+  void onCalendarEnabled(Calendar calendar, bool enabled) {
+    setState(() {
+      repository.setEnabled(calendar, enabled);
+    });
+  }
+
+  void onSelectCalendars() {
+    setState(() {
+      editEnabled = !editEnabled;
+    });
+  }
+
+  Widget buildCalendarList(BuildContext context) {
     return RefreshIndicator(
       onRefresh: () => repository.refreshCalendars(),
       child: StreamBuilder<List<Calendar>>(
           stream: repository.calendars(showEnabled: !editEnabled),
           builder:
               (BuildContext context, AsyncSnapshot<List<Calendar>> snapshot) {
-
             if (!snapshot.hasData) {
               return Center(child: CircularProgressIndicator());
             } else if (snapshot.hasError) {
@@ -147,10 +127,17 @@ class CalendarList extends StatelessWidget {
             List<Calendar> calendars = snapshot.data;
 
             if (calendars.isEmpty) {
+              if (!editEnabled) {
+                //We can't just directly change the state while building the current state, so we schedule a call after the frame.
+                WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => setState(() => editEnabled = true));
+              }
+
+              //This button is now largely pointless since we never show an empty list.
               return Center(
                   child: ElevatedButton(
                 child: Text("Select Calendars"),
-                onPressed: () => this.onSelectCalendars(),
+                onPressed: () => onSelectCalendars(),
               ));
             }
 
@@ -176,12 +163,12 @@ class CalendarList extends StatelessWidget {
                   title: Text(calendar.name),
                   selected:
                       (calendar.path == repository.currentCalendar?.path) &&
-                          selected,
+                          widget.selected,
                   onTap: () {
                     if (editEnabled) {
                       onCalendarEnabled(calendar, !isEnabled);
                     } else {
-                      onCalendarSelected(calendar);
+                      widget.onCalendarSelected(calendar);
                     }
                   },
                 );
@@ -189,5 +176,36 @@ class CalendarList extends StatelessWidget {
             );
           }),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      ListTile(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+                icon:
+                    Icon(editEnabled ? Icons.favorite : Icons.favorite_outline),
+                tooltip: "Edit",
+                onPressed: onSelectCalendars),
+            IconButton(
+              icon: Icon(Icons.settings),
+              tooltip: "Edit",
+              onPressed: () => widget.onEdit(repository.account),
+            ),
+          ],
+        ),
+        title: Text(widget.title, style: Theme.of(context).textTheme.subtitle1),
+      ),
+      buildCalendarList(context),
+      if (editEnabled)
+        ElevatedButton(
+            child: Text("Done"),
+            onPressed: () => setState(() {
+                  editEnabled = false;
+                }))
+    ]);
   }
 }
