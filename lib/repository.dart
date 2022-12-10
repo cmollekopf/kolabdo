@@ -507,57 +507,59 @@ class Repository {
     }
     final stopwatch = Stopwatch()..start();
 
-    //Just fetch everything
-    await fetchTodos(calendar).then((todos) async {
-      print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
-      var newList = todos.map((Todo todo) {
-        //Check if we have a newer entry locally already.
-        var local = _findLocalTodo(todo.id);
-        if (local != null) {
-          if (local.sequence > todo.sequence) {
-            print(
-                "Keeping local item instead ${local.sequence}:${todo.sequence} ${local.etag}:${todo.etag} ${todo.summary}");
-            //If we do, we keep that instead.
-            return local;
+    bool fetchInOne = true;
+
+    List<Todo> newList = [];
+    if (fetchInOne) {
+      //Just fetch everything
+      newList = await fetchTodos(calendar).then((todos) async {
+        print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
+        return todos.map((Todo todo) {
+          //Check if we have a newer entry locally already.
+          var local = _findLocalTodo(todo.id);
+          if (local != null) {
+            if (local.sequence > todo.sequence) {
+              print(
+                  "Keeping local item instead ${local.sequence}:${todo.sequence} ${local.etag}:${todo.etag} ${todo.summary}");
+              //If we do, we keep that instead.
+              return local;
+            }
+          }
+          return todo;
+        }).toList();
+      });
+    } else {
+      //This turns out to be slower than just fetching everything in a single request every time.
+      //Only fetch what we need to fetch, but in two queries
+      await fetchTodos(calendar, etagsOnly: true).then((todos) async {
+        print('fetched hrefs in ${stopwatch.elapsed.inMilliseconds}');
+        var localTodos = Map.fromIterable(_todoProvider._value,
+            key: (t) => t.path, value: (t) => t);
+        List<String> toFetch = [];
+        for (var remoteTodo in todos) {
+          if (localTodos.containsKey(remoteTodo.path)) {
+            var local = localTodos[remoteTodo.path];
+            //Modified
+            if (remoteTodo.etag != local.etag) {
+              toFetch.add(remoteTodo.path);
+            } else {
+              newList.add(local);
+            }
+          } else {
+            //New
+            toFetch.add(remoteTodo.path);
           }
         }
-        return todo;
-      }).toList();
+        await fetchTodos(calendar, hrefs: toFetch).then((todos) async {
+          print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
+          newList.addAll(todos);
+        });
+      });
+    }
 
-      await _saveToStorage(newList);
-      _todoProvider.update(newList);
-    });
-
-    //This turns out to be slower than just fetching everything in a single request every time.
-    ////Only fetch what we need to fetch, but in two queries
-    //await fetchTodos(calendar, etagsOnly: true).then((todos) async {
-    //  print('fetched hrefs in ${stopwatch.elapsed.inMilliseconds}');
-    //  var localTodos = Map.fromIterable(_todoProvider._value,
-    //      key: (t) => t.path, value: (t) => t);
-    //  var toFetch = List<String>();
-    //  var newList = List<Todo>();
-    //  for (var remoteTodo in todos) {
-    //    if (localTodos.containsKey(remoteTodo.path)) {
-    //      var local = localTodos[remoteTodo.path];
-    //      //Modified
-    //      if (remoteTodo.etag != local.etag) {
-    //        toFetch.add(remoteTodo.path);
-    //      } else {
-    //        newList.add(local);
-    //      }
-    //    } else {
-    //      //New
-    //      toFetch.add(remoteTodo.path);
-    //    }
-    //  }
-    //  await fetchTodos(calendar, hrefs: toFetch).then((todos) async {
-    //    print('Fetched items in ${stopwatch.elapsed.inMilliseconds}');
-    //    newList.addAll(todos);
-    //    await _saveToStorage(newList);
-    //    _todoProvider.update(newList);
-    //    print('Complete in ${stopwatch.elapsed.inMilliseconds}');
-    //  });
-    //});
+    await _saveToStorage(newList);
+    _todoProvider.update(newList);
+    print('Complete in ${stopwatch.elapsed.inMilliseconds}');
   }
 
   Future<List<Todo>> fetchTodos(Calendar calendar,
