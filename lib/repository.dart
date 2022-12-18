@@ -571,8 +571,12 @@ class Repository {
 
     _setInProgress(true);
 
-    var entries = await _client.getEntries(calendar.path,
-        hrefs: hrefs, etagsOnly: etagsOnly);
+    var entries = [];
+    try {
+        entries = await _client.getEntries(calendar.path, hrefs: hrefs, etagsOnly: etagsOnly);
+    } on ArgumentError catch (e) {
+        print("Error while fetching the calendar: ${calendar.path} $e");
+    }
 
     _setInProgress(false);
 
