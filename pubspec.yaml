@@ -1,5 +1,5 @@
 name: kolabdo
-description: A new Flutter project.
+description: A caldav todo application.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
@@ -37,7 +37,7 @@ dependencies:
   ical_parser:
     git:
       url: https://github.com/cmollekopf/ical-parser.git
-      ref: master
+      ref: main
   localstorage: ^4.0.0+1
   uuid: '>=2.0.0'
   intl: ^0.17.0
