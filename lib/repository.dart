@@ -354,9 +354,9 @@ class Repository {
     if (current != null) {
       currentCalendar = Calendar.fromJSONEncodable(current);
       _todoProvider.update(await _loadFromStorage());
-      _calendarProvider.update(await _loadCalendarsFromStorage());
     }
 
+    _calendarProvider.update(await _loadCalendarsFromStorage());
     var enabled = storage.getItem("enabledCalendars");
     if (enabled != null) {
       _enabledCalendars = Set<String>.from(enabled);
