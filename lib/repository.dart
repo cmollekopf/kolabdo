@@ -165,6 +165,7 @@ class Todo {
   bool doing = false;
   int sequence = 0;
   String etag;
+  bool dirty = false;
 
   Map<String, dynamic> json;
   String path;
@@ -288,6 +289,9 @@ class Repository {
   }
 
   Future<void> createTodo(todo) async {
+
+    todo.dirty = true;
+
     _todoProvider._value.add(todo);
     _todoProvider.notify();
 
@@ -306,6 +310,8 @@ class Repository {
     todo.sequence += 1;
     todo.updateTimestamp();
     todo.updateJson();
+
+    todo.dirty = true;
 
     _todoProvider._value[index] = todo;
     _todoProvider.notify();
@@ -555,6 +561,18 @@ class Repository {
           newList.addAll(todos);
         });
       });
+    }
+
+    // Protect new and modified tasks
+    for (var t in _todoProvider._value) {
+      if (t.dirty) {
+        var index = newList.indexWhere((_t) => _t.id == t.id);
+        if (index < 0) {
+          newList.add(t);
+        } else {
+          newList[index] = t;
+        }
+      }
     }
 
     await _saveToStorage(newList);
